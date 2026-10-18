@@ -8,6 +8,8 @@ import '../../../core/theme/accent_packs.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../sync/providers/sync_providers.dart';
 import '../../sync/services/sync_engine.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import '../../../database/database_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -228,6 +230,74 @@ class SettingsScreen extends ConsumerWidget {
 
             const SizedBox(height: 28),
 
+            // --- Data Backup & Portability Section ---
+            Text(
+              'DATA OWNERSHIP & BACKUP',
+              style: AppTypography.labelSmall(context.mutedText).copyWith(letterSpacing: 1.2),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Your data is stored locally in SQLite. Export anytime with zero lock-in.',
+              style: AppTypography.bodySmall(context.mutedText),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: context.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.border, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(LucideIcons.fileCode, size: 15),
+                      label: const Text('Export JSON'),
+                      onPressed: () async {
+                        final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
+                        final categories = await ref.read(categoryRepositoryProvider).getCategories();
+                        final exportMap = {
+                          'exportedAt': DateTime.now().toIso8601String(),
+                          'categories': categories.map((c) => c.toJson()).toList(),
+                          'tasks': tasks.map((t) => t.toJson()).toList(),
+                        };
+                        final jsonStr = const JsonEncoder.withIndent('  ').convert(exportMap);
+                        if (context.mounted) {
+                          _showExportDialog(context, 'JSON Backup', jsonStr);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(LucideIcons.fileText, size: 15),
+                      label: const Text('Export Markdown'),
+                      onPressed: () async {
+                        final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
+                        final buffer = StringBuffer();
+                        buffer.writeln('# Task Export — ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n');
+                        buffer.writeln('## Active Tasks');
+                        for (final t in tasks.where((t) => !t.isCompleted)) {
+                          buffer.writeln('- [ ] ${t.title}${t.priority.name != 'none' ? ' [${t.priority.displayName}]' : ''}');
+                        }
+                        buffer.writeln('\n## Completed Tasks');
+                        for (final t in tasks.where((t) => t.isCompleted)) {
+                          buffer.writeln('- [x] ${t.title}');
+                        }
+                        if (context.mounted) {
+                          _showExportDialog(context, 'Markdown Checklist', buffer.toString());
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
             // --- Sync History Audit Log ---
             Text(
               'RECENT SYNC HISTORY',
@@ -290,6 +360,62 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showExportDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: context.border, width: 1),
+        ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: AppTypography.titleMedium(context.primaryText)),
+            IconButton(
+              icon: const Icon(LucideIcons.copy, size: 16),
+              tooltip: 'Copy to clipboard',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: content));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$title copied to clipboard!'),
+                    backgroundColor: context.surface,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 500,
+          height: 350,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.secondarySurface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: context.border, width: 0.8),
+            ),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                content,
+                style: AppTypography.code(context.primaryText, fontSize: 11),
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

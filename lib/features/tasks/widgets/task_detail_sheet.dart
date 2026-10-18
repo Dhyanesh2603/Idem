@@ -28,6 +28,7 @@ class TaskDetailSheet extends ConsumerStatefulWidget {
 class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
+  late TextEditingController _subtaskController;
   TaskModel? _currentTask;
   bool _isInit = false;
 
@@ -36,12 +37,14 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
     super.initState();
     _titleController = TextEditingController();
     _descController = TextEditingController();
+    _subtaskController = TextEditingController();
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _subtaskController.dispose();
     super.dispose();
   }
 
@@ -84,6 +87,8 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
 
     final dependenciesAsync = ref.watch(taskDependenciesStreamProvider(widget.taskId));
     final dependencies = dependenciesAsync.asData?.value ?? [];
+    final subtasksAsync = ref.watch(taskSubtasksStreamProvider(widget.taskId));
+    final subtasks = subtasksAsync.asData?.value ?? [];
     final categoriesAsync = ref.watch(categoriesStreamProvider);
     final categories = categoriesAsync.asData?.value ?? [];
 
@@ -233,7 +238,124 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+
+            // Subtasks & Action Checklist Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'SUBTASKS & ACTION STEPS',
+                  style: AppTypography.labelSmall(context.mutedText).copyWith(letterSpacing: 1.2),
+                ),
+                if (subtasks.isNotEmpty)
+                  Text(
+                    '${subtasks.where((s) => s.isCompleted).length} / ${subtasks.length} done',
+                    style: AppTypography.code(context.accent, fontSize: 11),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            ...subtasks.map((st) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: context.secondarySurface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: context.border, width: 0.8),
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          ref.read(taskRepositoryProvider).toggleTaskCompletion(st.id);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: st.isCompleted ? context.accent : Colors.transparent,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: st.isCompleted ? context.accent : context.border,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: st.isCompleted
+                              ? const Center(child: Icon(LucideIcons.check, size: 12, color: Colors.black))
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          st.title,
+                          style: AppTypography.bodySmall(context.primaryText).copyWith(
+                            decoration: st.isCompleted ? TextDecoration.lineThrough : null,
+                            decorationColor: context.mutedText,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.trash2, size: 13),
+                        color: context.mutedText,
+                        onPressed: () {
+                          ref.read(taskRepositoryProvider).deleteTask(st.id);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 6),
+            // Inline add subtask input
+            Container(
+              height: 38,
+              decoration: BoxDecoration(
+                color: context.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: context.border, width: 0.8),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 10),
+                  Icon(LucideIcons.plus, size: 14, color: context.mutedText),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _subtaskController,
+                      style: AppTypography.bodySmall(context.primaryText),
+                      decoration: InputDecoration(
+                        hintText: 'Add an action step...',
+                        hintStyle: AppTypography.bodySmall(context.mutedText),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onSubmitted: (val) async {
+                        final text = val.trim();
+                        if (text.isEmpty) return;
+                        _subtaskController.clear();
+                        await ref.read(taskRepositoryProvider).createTask(
+                          title: text,
+                          parentTaskId: widget.taskId,
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
             const Divider(height: 1),
             const SizedBox(height: 16),
 

@@ -74,6 +74,7 @@ class TaskRepositoryImpl implements TaskRepository {
     final query = _db.select(_db.tasks)
       ..where((tbl) =>
           tbl.isDeleted.equals(false) &
+          tbl.parentTaskId.isNull() &
           (tbl.isFocus.equals(true) |
               (tbl.deadline.isBiggerOrEqualValue(startOfDay) &
                   tbl.deadline.isSmallerOrEqualValue(endOfDay))))
@@ -91,6 +92,7 @@ class TaskRepositoryImpl implements TaskRepository {
     final query = _db.select(_db.tasks)
       ..where((tbl) =>
           tbl.isDeleted.equals(false) &
+          tbl.parentTaskId.isNull() &
           tbl.isCompleted.equals(false) &
           tbl.deadline.isNull() &
           tbl.isFocus.equals(false))

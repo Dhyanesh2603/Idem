@@ -7,6 +7,7 @@ import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/app_colors.dart';
 import 'sync_status_badge.dart';
+import 'command_palette.dart';
 
 /// Responsive application shell providing:
 /// - Desktop (>= 768px): Persistent, spacious sidebar navigation with keyboard hints
@@ -55,6 +56,9 @@ class AppShell extends ConsumerWidget {
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.keyF:
                 context.push('/focus');
+                return KeyEventResult.handled;
+              case LogicalKeyboardKey.keyK:
+                CommandPalette.show(context);
                 return KeyEventResult.handled;
             }
           }
@@ -165,6 +169,45 @@ class _DesktopSidebar extends ConsumerWidget {
               ],
             ),
           ),
+
+          // Command Palette Search Trigger
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: InkWell(
+              onTap: () => CommandPalette.show(context),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: context.secondarySurface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: context.border, width: 0.8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.search, size: 13, color: context.mutedText),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Command Palette',
+                        style: AppTypography.bodySmall(context.mutedText),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: context.surface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.6),
+                      ),
+                      child: Text('⌘K', style: AppTypography.code(context.mutedText, fontSize: 9)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
 
           // Primary Navigation Items
           Expanded(

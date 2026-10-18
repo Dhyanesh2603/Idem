@@ -66,3 +66,12 @@ final taskUnfinishedBlockersProvider =
   final repository = ref.watch(taskRepositoryProvider);
   return repository.getUnfinishedBlockers(taskId);
 });
+
+/// Stream provider for subtasks belonging to a parent task
+final taskSubtasksStreamProvider =
+    StreamProvider.family<List<TaskModel>, String>((ref, parentTaskId) {
+  final repository = ref.watch(taskRepositoryProvider);
+  return repository.watchTasks().map(
+        (all) => all.where((t) => t.parentTaskId == parentTaskId && !t.isDeleted).toList(),
+      );
+});

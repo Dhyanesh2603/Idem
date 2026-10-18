@@ -74,6 +74,11 @@ class ThemeNotifier extends Notifier<AppThemeState> {
     } catch (_) {}
   }
 
+  Future<void> toggleTheme() async {
+    final next = state.themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    await setThemeMode(next);
+  }
+
   Future<void> setAccentPack(AccentPack pack) async {
     state = state.copyWith(accentPack: pack);
     try {

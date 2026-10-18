@@ -27,6 +27,9 @@ class TodayTaskItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final blockersAsync = ref.watch(taskUnfinishedBlockersProvider(task.id));
     final hasBlockers = blockersAsync.asData?.value.isNotEmpty ?? false;
+    final subtasksAsync = ref.watch(taskSubtasksStreamProvider(task.id));
+    final subtasks = subtasksAsync.asData?.value ?? [];
+    final completedSubtasks = subtasks.where((s) => s.isCompleted).length;
     final categoriesAsync = ref.watch(categoriesStreamProvider);
     final category = task.categoryId != null
         ? categoriesAsync.asData?.value.where((c) => c.id == task.categoryId).firstOrNull
@@ -220,6 +223,36 @@ class TodayTaskItem extends ConsumerWidget {
                           Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))),
                           fontSize: 9,
                         ),
+                      ),
+                    ),
+
+                  // Subtasks Progress Pill (if has subtasks)
+                  if (subtasks.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.checkSquare,
+                            size: 9,
+                            color: completedSubtasks == subtasks.length ? context.accent : context.mutedText,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$completedSubtasks/${subtasks.length}',
+                            style: AppTypography.code(
+                              completedSubtasks == subtasks.length ? context.accent : context.mutedText,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 

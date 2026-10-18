@@ -9,6 +9,9 @@ import '../../../shared/widgets/sync_status_badge.dart';
 import '../widgets/today_task_item.dart';
 import '../widgets/daily_planning_sheet.dart';
 import '../widgets/quick_add_bar.dart';
+import '../widgets/daily_intention_card.dart';
+import '../widgets/shutdown_sheet.dart';
+import '../../../shared/widgets/command_palette.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../tasks/services/deadline_notification_service.dart';
@@ -103,6 +106,22 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                       ),
                       const SizedBox(width: 4),
 
+                      // Command Palette (⌘K) Trigger
+                      IconButton(
+                        tooltip: 'Command Palette (⌘K)',
+                        icon: Icon(LucideIcons.command, size: 17, color: context.mutedText),
+                        onPressed: () => CommandPalette.show(context),
+                      ),
+                      const SizedBox(width: 2),
+
+                      // Evening Shutdown Ritual Button
+                      IconButton(
+                        tooltip: 'Daily Shutdown Ritual',
+                        icon: Icon(LucideIcons.sunset, size: 17, color: context.mutedText),
+                        onPressed: () => ShutdownSheet.show(context),
+                      ),
+                      const SizedBox(width: 4),
+
                       // Daily Planning Session Button
                       OutlinedButton.icon(
                         onPressed: () {
@@ -189,6 +208,9 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   ),
                 ),
               ),
+
+            // Daily Intention / North Star Focus Card
+            const DailyIntentionCard(),
 
             // Daily Horizon Progress Bar (shows if any tasks exist)
             todayTasksAsync.maybeWhen(
