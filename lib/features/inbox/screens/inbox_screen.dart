@@ -9,6 +9,7 @@ import '../../today/widgets/today_task_item.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../categories/providers/category_providers.dart';
+import '../../categories/widgets/create_category_sheet.dart';
 import '../../../database/database_provider.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
@@ -126,33 +127,65 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                 ),
               ),
 
-            // Category Filter Pills
-            if (categories.isNotEmpty)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-                child: Row(
-                  children: [
-                    _InboxCategoryFilterPill(
-                      label: 'All',
-                      isSelected: _selectedCategoryId == null,
-                      onTap: () => setState(() => _selectedCategoryId = null),
-                    ),
-                    ...categories.map((cat) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: _InboxCategoryFilterPill(
-                          label: cat.name,
-                          isSelected: _selectedCategoryId == cat.id,
-                          onTap: () => setState(() {
-                            _selectedCategoryId = (_selectedCategoryId == cat.id) ? null : cat.id;
-                          }),
+            // Category Filter Pills with "+ New Category" Action
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+              child: Row(
+                children: [
+                  _InboxCategoryFilterPill(
+                    label: 'All',
+                    isSelected: _selectedCategoryId == null,
+                    onTap: () => setState(() => _selectedCategoryId = null),
+                  ),
+                  ...categories.map((cat) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _InboxCategoryFilterPill(
+                        label: cat.name,
+                        isSelected: _selectedCategoryId == cat.id,
+                        onTap: () => setState(() {
+                          _selectedCategoryId = (_selectedCategoryId == cat.id) ? null : cat.id;
+                        }),
+                      ),
+                    );
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const CreateCategorySheet(),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.secondarySurface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: context.border, width: 0.8),
                         ),
-                      );
-                    }),
-                  ],
-                ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.plus, size: 12, color: context.mutedText),
+                            const SizedBox(width: 4),
+                            Text(
+                              'New',
+                              style: AppTypography.labelSmall(context.mutedText),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
 
             // Quick capture bar (captures unscheduled to inbox)
             const Padding(

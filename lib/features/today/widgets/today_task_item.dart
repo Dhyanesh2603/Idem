@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -126,6 +128,58 @@ class TodayTaskItem extends ConsumerWidget {
                       ),
                     ),
 
+                  // Direct Focus Mode Launcher (if marked as Today Focus)
+                  if (task.isFocus && !task.isCompleted)
+                    InkWell(
+                      onTap: () => context.go('/focus'),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: context.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: context.accent, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.play, size: 9, color: context.accent),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Focus',
+                              style: AppTypography.code(context.accent, fontSize: 10).copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Deadline Badge (if set)
+                  if (task.deadline != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.clock, size: 9, color: context.mutedText),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormat('h:mm a').format(task.deadline!),
+                            style: AppTypography.code(context.mutedText, fontSize: 9),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Priority Pill (if set)
                   if (task.priority != TaskPriority.none)
                     Container(
@@ -153,13 +207,19 @@ class TodayTaskItem extends ConsumerWidget {
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: context.secondarySurface,
+                        color: Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: context.border, width: 0.8),
+                        border: Border.all(
+                          color: Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.4),
+                          width: 0.8,
+                        ),
                       ),
                       child: Text(
                         category.name,
-                        style: AppTypography.code(context.secondaryText, fontSize: 9),
+                        style: AppTypography.code(
+                          Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))),
+                          fontSize: 9,
+                        ),
                       ),
                     ),
 

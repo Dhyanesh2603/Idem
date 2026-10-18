@@ -13,6 +13,7 @@ import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../tasks/services/deadline_notification_service.dart';
 import '../../categories/providers/category_providers.dart';
+import '../../categories/widgets/create_category_sheet.dart';
 import '../../../database/database_provider.dart';
 
 class TodayScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   String? _selectedCategoryId;
   String _searchQuery = '';
   bool _showSearch = false;
+  bool _showCompleted = true;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -188,33 +190,129 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                 ),
               ),
 
-            // Category Filter Pills
-            if (categories.isNotEmpty)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-                child: Row(
-                  children: [
-                    _CategoryFilterPill(
-                      label: 'All',
-                      isSelected: _selectedCategoryId == null,
-                      onTap: () => setState(() => _selectedCategoryId = null),
+            // Daily Horizon Progress Bar (shows if any tasks exist)
+            todayTasksAsync.maybeWhen(
+              data: (tasks) {
+                if (tasks.isEmpty) return const SizedBox.shrink();
+                final total = tasks.length;
+                final completed = tasks.where((t) => t.isCompleted).length;
+                final active = tasks.where((t) => !t.isCompleted).toList();
+                final focusCount = active.where((t) => t.isFocus).length;
+                final progress = total > 0 ? (completed / total) : 0.0;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: context.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.border, width: 0.8),
                     ),
-                    ...categories.map((cat) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: _CategoryFilterPill(
-                          label: cat.name,
-                          isSelected: _selectedCategoryId == cat.id,
-                          onTap: () => setState(() {
-                            _selectedCategoryId = (_selectedCategoryId == cat.id) ? null : cat.id;
-                          }),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '$completed of $total tasks completed • ${(progress * 100).toInt()}%',
+                              style: AppTypography.labelSmall(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            Row(
+                              children: [
+                                if (focusCount > 0) ...[
+                                  Icon(LucideIcons.target, size: 12, color: context.accent),
+                                  const SizedBox(width: 4),
+                                  Text('$focusCount focus', style: AppTypography.code(context.accent, fontSize: 10)),
+                                  const SizedBox(width: 10),
+                                ],
+                                Icon(LucideIcons.listTodo, size: 12, color: context.mutedText),
+                                const SizedBox(width: 4),
+                                Text('${active.length} pending', style: AppTypography.code(context.mutedText, fontSize: 10)),
+                              ],
+                            ),
+                          ],
                         ),
-                      );
-                    }),
-                  ],
-                ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 4,
+                            backgroundColor: context.secondarySurface,
+                            valueColor: AlwaysStoppedAnimation<Color>(context.accent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
+            ),
+
+            // Category Filter Pills with "+ New Category" Action
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+              child: Row(
+                children: [
+                  _CategoryFilterPill(
+                    label: 'All',
+                    isSelected: _selectedCategoryId == null,
+                    onTap: () => setState(() => _selectedCategoryId = null),
+                  ),
+                  ...categories.map((cat) {
+                    final color = Color(int.parse(cat.colorHex.replaceFirst('#', '0xFF')));
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _CategoryFilterPill(
+                        label: cat.name,
+                        dotColor: color,
+                        isSelected: _selectedCategoryId == cat.id,
+                        onTap: () => setState(() {
+                          _selectedCategoryId = (_selectedCategoryId == cat.id) ? null : cat.id;
+                        }),
+                      ),
+                    );
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => const CreateCategorySheet(),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.secondarySurface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: context.border, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.plus, size: 12, color: context.mutedText),
+                            const SizedBox(width: 4),
+                            Text(
+                              'New',
+                              style: AppTypography.labelSmall(context.mutedText),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
 
             // Inline Quick Add Input Bar
             const Padding(
@@ -224,7 +322,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 
             const SizedBox(height: 4),
 
-            // Reorderable Task List with Drag & Drop
+            // Task List Area (Active reorderable + Collapsible completed)
             Expanded(
               child: todayTasksAsync.when(
                 data: (tasks) {
@@ -252,27 +350,113 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                     );
                   }
 
-                  return ReorderableListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    itemCount: filtered.length,
-                    buildDefaultDragHandles: false,
-                    onReorder: (oldIndex, newIndex) {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final reordered = List<TaskModel>.from(filtered);
-                      final item = reordered.removeAt(oldIndex);
-                      reordered.insert(newIndex, item);
-                      ref.read(taskRepositoryProvider).reorderTasks(
-                            reordered.map((t) => t.id).toList(),
-                          );
-                    },
-                    itemBuilder: (ctx, i) {
-                      final task = filtered[i];
-                      return TodayTaskItem(
-                        key: ValueKey(task.id),
-                        task: task,
-                        dragIndex: i,
-                      );
-                    },
+                  final activeTasks = filtered.where((t) => !t.isCompleted).toList();
+                  final completedTasks = filtered.where((t) => t.isCompleted).toList();
+
+                  return CustomScrollView(
+                    slivers: [
+                      // Active Reorderable Tasks
+                      if (activeTasks.isNotEmpty)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                          sliver: SliverReorderableList(
+                            itemCount: activeTasks.length,
+                            onReorder: (oldIndex, newIndex) {
+                              if (newIndex > oldIndex) newIndex -= 1;
+                              final reordered = List<TaskModel>.from(activeTasks);
+                              final item = reordered.removeAt(oldIndex);
+                              reordered.insert(newIndex, item);
+                              ref.read(taskRepositoryProvider).reorderTasks(
+                                    reordered.map((t) => t.id).toList(),
+                                  );
+                            },
+                            itemBuilder: (ctx, i) {
+                              final task = activeTasks[i];
+                              return ReorderableDelayedDragStartListener(
+                                key: ValueKey(task.id),
+                                index: i,
+                                child: TodayTaskItem(
+                                  task: task,
+                                  dragIndex: i,
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      else if (completedTasks.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Icon(LucideIcons.checkCircle2, size: 28, color: context.accent),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'All scheduled tasks completed!',
+                                    style: AppTypography.titleMedium(context.primaryText),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Great focus today. Take a break or plan upcoming goals.',
+                                    style: AppTypography.bodySmall(context.mutedText),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Collapsible Completed Section
+                      if (completedTasks.isNotEmpty) ...[
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 8),
+                            child: InkWell(
+                              onTap: () => setState(() => _showCompleted = !_showCompleted),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _showCompleted ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+                                      size: 15,
+                                      color: context.mutedText,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Completed (${completedTasks.length})',
+                                      style: AppTypography.labelMedium(context.mutedText).copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_showCompleted)
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (ctx, i) {
+                                  final task = completedTasks[i];
+                                  return TodayTaskItem(
+                                    key: ValueKey(task.id),
+                                    task: task,
+                                    dragIndex: null,
+                                  );
+                                },
+                                childCount: completedTasks.length,
+                              ),
+                            ),
+                          ),
+                      ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
                   );
                 },
                 loading: () => const Center(
@@ -396,11 +580,13 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
 class _CategoryFilterPill extends StatelessWidget {
   final String label;
   final bool isSelected;
+  final Color? dotColor;
   final VoidCallback onTap;
 
   const _CategoryFilterPill({
     required this.label,
     required this.isSelected,
+    this.dotColor,
     required this.onTap,
   });
 
@@ -419,11 +605,27 @@ class _CategoryFilterPill extends StatelessWidget {
             width: isSelected ? 1.2 : 0.8,
           ),
         ),
-        child: Text(
-          label,
-          style: AppTypography.labelSmall(isSelected ? context.accent : context.mutedText).copyWith(
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: AppTypography.labelSmall(isSelected ? context.accent : context.mutedText).copyWith(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );
