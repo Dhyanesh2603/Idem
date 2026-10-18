@@ -4,17 +4,43 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/sync_status_badge.dart';
 import '../widgets/today_task_item.dart';
 import '../widgets/daily_planning_sheet.dart';
 import '../widgets/quick_add_bar.dart';
+import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_providers.dart';
+import '../../tasks/services/deadline_notification_service.dart';
+import '../../categories/providers/category_providers.dart';
+import '../../../database/database_provider.dart';
 
-class TodayScreen extends ConsumerWidget {
+class TodayScreen extends ConsumerStatefulWidget {
   const TodayScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends ConsumerState<TodayScreen> {
+  String? _selectedCategoryId;
+  String _searchQuery = '';
+  bool _showSearch = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final todayTasksAsync = ref.watch(todayTasksStreamProvider);
+    final deadlineAlerts = ref.watch(deadlineAlertsProvider);
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final categories = categoriesAsync.asData?.value ?? [];
+
     final now = DateTime.now();
     final dateStr = DateFormat('EEEE, MMMM d').format(now);
 
@@ -24,9 +50,9 @@ class TodayScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Typographical Calm Header
+            // Typographical Calm Header with SyncStatusBadge & Actions
             Padding(
-              padding: const EdgeInsets.only(left: 24, right: 24, top: 28, bottom: 8),
+              padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -49,65 +75,204 @@ class TodayScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  // Daily Planning Session Button
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => const DailyPlanningSheet(),
-                      );
-                    },
-                    icon: Icon(LucideIcons.sparkles, size: 15, color: context.accent),
-                    label: Text(
-                      'Plan Day',
-                      style: AppTypography.labelMedium(context.primaryText),
-                    ),
+                  Row(
+                    children: [
+                      // Connectivity & Sync Status Badge
+                      const SyncStatusBadge(compact: true),
+                      const SizedBox(width: 8),
+
+                      // Search Toggle
+                      IconButton(
+                        tooltip: 'Search tasks',
+                        icon: Icon(
+                          _showSearch ? LucideIcons.x : LucideIcons.search,
+                          size: 18,
+                          color: _showSearch ? context.accent : context.mutedText,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showSearch = !_showSearch;
+                            if (!_showSearch) {
+                              _searchQuery = '';
+                              _searchController.clear();
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Daily Planning Session Button
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const DailyPlanningSheet(),
+                          );
+                        },
+                        icon: Icon(LucideIcons.sparkles, size: 14, color: context.accent),
+                        label: Text(
+                          'Plan Day',
+                          style: AppTypography.labelMedium(context.primaryText),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
+            // Imminent Deadline Alert Banner (if applicable)
+            if (deadlineAlerts.hasUrgentAlerts)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                child: InkWell(
+                  onTap: () => _showDeadlineAlertDetails(context, deadlineAlerts),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.35),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.alertTriangle, size: 15, color: AppColors.warning),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            deadlineAlerts.overdueTasks.isNotEmpty
+                                ? '${deadlineAlerts.overdueTasks.length} task(s) overdue • Tap to inspect'
+                                : '${deadlineAlerts.dueTodayTasks.length} deadline(s) due today • Tap to inspect',
+                            style: AppTypography.bodySmall(context.primaryText).copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(LucideIcons.chevronRight, size: 14, color: context.mutedText),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Optional Search Input Bar
+            if (_showSearch)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: context.border, width: 0.8),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    style: AppTypography.bodyMedium(context.primaryText),
+                    decoration: InputDecoration(
+                      hintText: 'Search today’s tasks...',
+                      hintStyle: AppTypography.bodySmall(context.mutedText),
+                      prefixIcon: Icon(LucideIcons.search, size: 16, color: context.mutedText),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+                  ),
+                ),
+              ),
+
+            // Category Filter Pills
+            if (categories.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                child: Row(
+                  children: [
+                    _CategoryFilterPill(
+                      label: 'All',
+                      isSelected: _selectedCategoryId == null,
+                      onTap: () => setState(() => _selectedCategoryId = null),
+                    ),
+                    ...categories.map((cat) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: _CategoryFilterPill(
+                          label: cat.name,
+                          isSelected: _selectedCategoryId == cat.id,
+                          onTap: () => setState(() {
+                            _selectedCategoryId = (_selectedCategoryId == cat.id) ? null : cat.id;
+                          }),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
             // Inline Quick Add Input Bar
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: QuickAddBar(isTodayDefault: true),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
-            // Task List
+            // Reorderable Task List with Drag & Drop
             Expanded(
               child: todayTasksAsync.when(
                 data: (tasks) {
-                  if (tasks.isEmpty) {
-                    return _EmptyTodayState();
+                  // Apply active filters (search and category)
+                  var filtered = tasks;
+                  if (_selectedCategoryId != null) {
+                    filtered = filtered.where((t) => t.categoryId == _selectedCategoryId).toList();
+                  }
+                  if (_searchQuery.isNotEmpty) {
+                    filtered = filtered.where((t) =>
+                        t.title.toLowerCase().contains(_searchQuery) ||
+                        t.description.toLowerCase().contains(_searchQuery)).toList();
                   }
 
-                  final focusTasks = tasks.where((t) => t.isFocus).toList();
-                  final regularTasks = tasks.where((t) => !t.isFocus).toList();
+                  if (filtered.isEmpty) {
+                    return _EmptyTodayState(
+                      hasFilter: _selectedCategoryId != null || _searchQuery.isNotEmpty,
+                      onClearFilters: () {
+                        setState(() {
+                          _selectedCategoryId = null;
+                          _searchQuery = '';
+                          _searchController.clear();
+                        });
+                      },
+                    );
+                  }
 
-                  return ListView(
+                  return ReorderableListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    children: [
-                      if (focusTasks.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: "TODAY'S FOCUS",
-                          count: focusTasks.length,
-                          accentColor: context.accent,
-                        ),
-                        ...focusTasks.map((t) => TodayTaskItem(key: ValueKey(t.id), task: t)),
-                        const SizedBox(height: 24),
-                      ],
-                      if (regularTasks.isNotEmpty) ...[
-                        _SectionHeader(
-                          title: 'SCHEDULED',
-                          count: regularTasks.length,
-                        ),
-                        ...regularTasks.map((t) => TodayTaskItem(key: ValueKey(t.id), task: t)),
-                      ],
-                    ],
+                    itemCount: filtered.length,
+                    buildDefaultDragHandles: false,
+                    onReorder: (oldIndex, newIndex) {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final reordered = List<TaskModel>.from(filtered);
+                      final item = reordered.removeAt(oldIndex);
+                      reordered.insert(newIndex, item);
+                      ref.read(taskRepositoryProvider).reorderTasks(
+                            reordered.map((t) => t.id).toList(),
+                          );
+                    },
+                    itemBuilder: (ctx, i) {
+                      final task = filtered[i];
+                      return TodayTaskItem(
+                        key: ValueKey(task.id),
+                        task: task,
+                        dragIndex: i,
+                      );
+                    },
                   );
                 },
                 loading: () => const Center(
@@ -130,69 +295,178 @@ class TodayScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showDeadlineAlertDetails(BuildContext context, DeadlineAlertSummary alerts) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.bellRing, size: 18, color: AppColors.warning),
+                        const SizedBox(width: 8),
+                        Text('Deadline Reminders', style: AppTypography.titleMedium(context.primaryText)),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.x, size: 16),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (alerts.overdueTasks.isNotEmpty) ...[
+                  Text(
+                    'OVERDUE',
+                    style: AppTypography.labelSmall(AppColors.error).copyWith(letterSpacing: 1.2),
+                  ),
+                  const SizedBox(height: 6),
+                  ...alerts.overdueTasks.take(4).map(
+                        (t) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.alertCircle, size: 14, color: AppColors.error),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(t.title, style: AppTypography.bodySmall(context.primaryText)),
+                              ),
+                              Text(
+                                t.deadline != null ? DateFormat('MMM d').format(t.deadline!) : '',
+                                style: AppTypography.code(AppColors.error, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  const SizedBox(height: 12),
+                ],
+                if (alerts.dueTodayTasks.isNotEmpty) ...[
+                  Text(
+                    'DUE TODAY',
+                    style: AppTypography.labelSmall(AppColors.warning).copyWith(letterSpacing: 1.2),
+                  ),
+                  const SizedBox(height: 6),
+                  ...alerts.dueTodayTasks.take(4).map(
+                        (t) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(LucideIcons.clock, size: 14, color: AppColors.warning),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(t.title, style: AppTypography.bodySmall(context.primaryText)),
+                              ),
+                              Text('Today', style: AppTypography.code(AppColors.warning, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Dismiss Alert'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color? accentColor;
+class _CategoryFilterPill extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  const _SectionHeader({
-    required this.title,
-    required this.count,
-    this.accentColor,
+  const _CategoryFilterPill({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 4),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: AppTypography.labelSmall(accentColor ?? context.mutedText).copyWith(
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w600,
-            ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected ? context.accent.withValues(alpha: 0.15) : context.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? context.accent : context.border,
+            width: isSelected ? 1.2 : 0.8,
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: context.secondarySurface,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              style: AppTypography.code(context.mutedText, fontSize: 10),
-            ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall(isSelected ? context.accent : context.mutedText).copyWith(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
 class _EmptyTodayState extends StatelessWidget {
+  final bool hasFilter;
+  final VoidCallback? onClearFilters;
+
+  const _EmptyTodayState({
+    this.hasFilter = false,
+    this.onClearFilters,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(LucideIcons.sun, size: 36, color: context.mutedText),
+          Icon(hasFilter ? LucideIcons.filterX : LucideIcons.sun, size: 36, color: context.mutedText),
           const SizedBox(height: 16),
           Text(
-            'Clear Horizon',
+            hasFilter ? 'No Matching Tasks' : 'Clear Horizon',
             style: AppTypography.titleMedium(context.primaryText),
           ),
           const SizedBox(height: 6),
           Text(
-            'No tasks scheduled for today. Add a task above or plan your day.',
+            hasFilter
+                ? 'No tasks match the active filter or search.'
+                : 'No tasks scheduled for today. Add a task above or plan your day.',
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium(context.mutedText),
           ),
+          if (hasFilter && onClearFilters != null) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: onClearFilters,
+              icon: const Icon(LucideIcons.rotateCcw, size: 14),
+              label: const Text('Reset Filters'),
+            ),
+          ],
         ],
       ),
     );

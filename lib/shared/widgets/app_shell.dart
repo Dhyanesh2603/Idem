@@ -6,8 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/theme/theme_extensions.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/app_colors.dart';
-import '../../features/sync/providers/sync_providers.dart';
-import '../../features/sync/services/sync_engine.dart';
+import 'sync_status_badge.dart';
 
 /// Responsive application shell providing:
 /// - Desktop (>= 768px): Persistent, spacious sidebar navigation with keyboard hints
@@ -126,8 +125,6 @@ class _DesktopSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final syncState = ref.watch(syncStateProvider);
-
     return Container(
       width: 230,
       color: context.surface,
@@ -224,9 +221,9 @@ class _DesktopSidebar extends ConsumerWidget {
           ),
 
           // Connectivity & Sync Status Pill at bottom
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _SyncStatusBadge(syncState: syncState),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: SyncStatusBadge(),
           ),
         ],
       ),
@@ -300,53 +297,4 @@ class _SidebarItem extends StatelessWidget {
   }
 }
 
-class _SyncStatusBadge extends StatelessWidget {
-  final SyncState syncState;
 
-  const _SyncStatusBadge({required this.syncState});
-
-  @override
-  Widget build(BuildContext context) {
-    Color indicatorColor;
-    String statusText;
-
-    switch (syncState.status) {
-      case SyncStatusState.idle:
-        indicatorColor = AppColors.success;
-        statusText = syncState.pendingOperationsCount > 0
-            ? '${syncState.pendingOperationsCount} queued'
-            : 'Synced';
-        break;
-      case SyncStatusState.syncing:
-        indicatorColor = context.accent;
-        statusText = 'Syncing...';
-        break;
-      case SyncStatusState.offline:
-        indicatorColor = AppColors.warning;
-        statusText = 'Offline';
-        break;
-      case SyncStatusState.error:
-        indicatorColor = AppColors.error;
-        statusText = 'Sync alert';
-        break;
-    }
-
-    return Row(
-      children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: indicatorColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          statusText,
-          style: AppTypography.labelSmall(context.mutedText),
-        ),
-      ],
-    );
-  }
-}

@@ -8,20 +8,27 @@ import '../../tasks/models/task_model.dart';
 import '../../tasks/models/task_priority.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../tasks/widgets/task_detail_sheet.dart';
+import '../../categories/providers/category_providers.dart';
 import '../../../database/database_provider.dart';
 
 class TodayTaskItem extends ConsumerWidget {
   final TaskModel task;
+  final int? dragIndex;
 
   const TodayTaskItem({
     super.key,
     required this.task,
+    this.dragIndex,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blockersAsync = ref.watch(taskUnfinishedBlockersProvider(task.id));
     final hasBlockers = blockersAsync.asData?.value.isNotEmpty ?? false;
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final category = task.categoryId != null
+        ? categoriesAsync.asData?.value.where((c) => c.id == task.categoryId).firstOrNull
+        : null;
 
     return AnimatedOpacity(
       duration: AppMotion.taskCompletion,
@@ -140,6 +147,22 @@ class TodayTaskItem extends ConsumerWidget {
                       ),
                     ),
 
+                  // Category Pill (if set)
+                  if (category != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.8),
+                      ),
+                      child: Text(
+                        category.name,
+                        style: AppTypography.code(context.secondaryText, fontSize: 9),
+                      ),
+                    ),
+
                   // Quick Actions Menu
                   PopupMenuButton<String>(
                     icon: Icon(LucideIcons.moreVertical, size: 16, color: context.mutedText),
@@ -191,6 +214,16 @@ class TodayTaskItem extends ConsumerWidget {
                       ),
                     ],
                   ),
+
+                  // Drag handle for reordering
+                  if (dragIndex != null)
+                    ReorderableDragStartListener(
+                      index: dragIndex!,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(LucideIcons.gripVertical, size: 16, color: context.mutedText),
+                      ),
+                    ),
                 ],
               ),
             ),

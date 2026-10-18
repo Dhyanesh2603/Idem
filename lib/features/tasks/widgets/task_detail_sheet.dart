@@ -9,6 +9,8 @@ import '../models/task_model.dart';
 import '../models/task_priority.dart';
 import '../models/recurring_rule.dart';
 import '../providers/task_providers.dart';
+import '../../categories/models/category_model.dart';
+import '../../categories/providers/category_providers.dart';
 import '../../../database/database_provider.dart';
 
 class TaskDetailSheet extends ConsumerStatefulWidget {
@@ -82,6 +84,8 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
 
     final dependenciesAsync = ref.watch(taskDependenciesStreamProvider(widget.taskId));
     final dependencies = dependenciesAsync.asData?.value ?? [];
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final categories = categoriesAsync.asData?.value ?? [];
 
     return Container(
       padding: EdgeInsets.only(
@@ -159,6 +163,22 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
                   itemLabel: (p) => p.displayName,
                   onSelect: (p) async {
                     setState(() => _currentTask = _currentTask!.copyWith(priority: p));
+                    await _save();
+                  },
+                ),
+
+                // Category picker
+                _FilterChipButton<CategoryModel?>(
+                  label: categories.where((c) => c.id == _currentTask!.categoryId).firstOrNull?.name ?? 'No Category',
+                  icon: LucideIcons.tag,
+                  color: context.secondaryText,
+                  items: [null, ...categories],
+                  itemLabel: (c) => c?.name ?? 'No Category',
+                  onSelect: (c) async {
+                    setState(() => _currentTask = _currentTask!.copyWith(
+                      categoryId: c?.id,
+                      clearCategoryId: c == null,
+                    ));
                     await _save();
                   },
                 ),
