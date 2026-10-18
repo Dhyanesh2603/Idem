@@ -10,8 +10,7 @@ sealed class ApiException implements Exception {
 }
 
 class NetworkException extends ApiException {
-  const NetworkException([String message = 'Network connection unavailable'])
-      : super(message);
+  const NetworkException([super.message = 'Network connection unavailable']);
 }
 
 class UnauthorizedException extends ApiException {
@@ -28,6 +27,8 @@ class ConflictException extends ApiException {
 }
 
 class ServerException extends ApiException {
-  const ServerException([String message = 'Internal server error', int? statusCode = 500])
-      : super(message, statusCode);
+  const ServerException([
+    super.message = 'Internal server error',
+    super.statusCode = 500,
+  ]);
 }
