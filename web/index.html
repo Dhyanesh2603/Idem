@@ -33,6 +33,22 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- SQLite WASM for offline web persistence via Drift -->
+  <script src="sql-wasm.js"></script>
+  <script>
+    if (typeof window.initSqlJs === 'function') {
+      const _origInitSqlJs = window.initSqlJs;
+      window.initSqlJs = function(options) {
+        options = options || {};
+        if (!options.locateFile) {
+          options.locateFile = function(filename) {
+            return filename;
+          };
+        }
+        return _origInitSqlJs(options);
+      };
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

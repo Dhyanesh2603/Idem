@@ -4,10 +4,13 @@ import 'package:drift/web.dart';
 
 abstract final class DatabaseConnectionFactory {
   static QueryExecutor connect({String dbName = 'obsidian_slate.sqlite'}) {
-    return WebDatabase(dbName);
+    return WebDatabase.withStorage(
+      DriftWebStorage.indexedDb(dbName, migrateFromLocalStorage: true),
+    );
   }
 
   static QueryExecutor inMemory() {
     return WebDatabase.withStorage(DriftWebStorage.volatile());
   }
 }
+
