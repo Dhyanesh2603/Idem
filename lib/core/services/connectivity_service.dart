@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'reachability_probe.dart';
 
 /// Service for detecting real network reachability.
 ///
@@ -56,14 +56,7 @@ class ConnectivityService {
       return false;
     }
 
-    try {
-      final lookup = await InternetAddress.lookup('dns.google')
-          .timeout(const Duration(seconds: 3));
-      return lookup.isNotEmpty && lookup[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      // Offline or network unreachable
-      return false;
-    }
+    return probeDnsReachability();
   }
 
   void dispose() {
