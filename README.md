@@ -21,8 +21,11 @@
 ## • APK for Android or an accessible iOS build, with testing instructions
 
 ### Direct APK Download
-- **Release APK File**: [idem-release.apk](./idem-release.apk) (also located in `build/app/outputs/flutter-apk/app-release.apk`)
+- **Direct GitHub Download**: [Download idem-release.apk (83.4 MB)](https://github.com/Dhyanesh2603/Idem/raw/main/idem-release.apk)
+- **Repository Root File**: [idem-release.apk](./idem-release.apk)
+- **Built Artifact Path**: `build/app/outputs/flutter-apk/app-release.apk`
 - **Package Name**: `com.example.obsidian_slate` (Application Display Name: **Idem**)
+- **Target Architecture**: Universal APK (`arm64-v8a`, `armeabi-v7a`, `x86_64`)
 - **Target SDK**: Android 16 (API 36) down to Android 5.0 (API 21)
 
 ### Hardware Verification via USB Debugging
@@ -133,12 +136,13 @@ python -m pytest backend/tests/
 - **Recurring Habits & Routines**: Daily, Weekdays, Weekly, and Monthly cycles with automatic spawning of next instances.
 
 #### B. Strategic Prioritization & Workstations
-- **Eisenhower Priority Matrix (`/matrix`)**:
-  - Four distinct quadrants: **Q1: Do First**, **Q2: Schedule / Strategic**, **Q3: Delegate / Quick Wins**, **Q4: Backlog / Someday**.
-- **Linear-Grade Visual Kanban Workstation (`/board` / `⌘B`)**:
+- **Dedicated Visual Kanban Workstation (`/board` / `⌘B` / `⌘4`)**:
+  - Full-page dedicated workstation replacing traditional matrix views for focused execution.
   - 4 Obsidian Slate Swimlanes: `Backlog`, `To Do`, `In Progress`, and `Done`.
-  - Directional keyboard shortcuts, inline card creation, subtask counts, and priority badges.
-  - Switchable directly within Today (`List` | `Timeline` | `Board`).
+  - **Tactile Drag-and-Drop**: Long-press any card to pick up and drag across columns or drop onto sticky stage tabs.
+  - **Mobile-Optimized Horizontal Snapping**: Viewport-snapping `PageView` on mobile with visual drop target borders and stage pills.
+  - **Expanded High-Clarity Cards**: Enlarged 16px-padded card layout with subtask checklist progress indicators (`✓ 2/4`), category badges, time estimates, priority flags, and tactile drag grips.
+  - Directional keyboard shortcuts and inline card creation.
 - **Algorithmic Day Orchestrator (`SmartDayScheduler`)**:
   - 1-click intelligent day scheduler that packs uncompleted tasks into energy-aligned blocks starting at 9:00 AM.
   - Automatically protects a 45m lunch/recharge buffer at 12:30 PM and schedules high-cognitive tasks in morning focus blocks.
