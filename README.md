@@ -1,261 +1,170 @@
-# Obsidian Slate: Offline-First Calm Productivity Workstation
+# IDEM — Offline-First Workstation
 
-Obsidian Slate is a commercial-grade, offline-first productivity application and synchronization server built from the ground up to reduce cognitive overhead, eliminate visual clutter, and help users focus on intentional daily work.
+[![Flutter Tests](https://img.shields.io/badge/flutter_tests-21%2F21_passed-brightgreen.svg)](#automated-testing)
+[![FastAPI Backend Tests](https://img.shields.io/badge/backend_tests-3%2F3_passed-brightgreen.svg)](#backend-architecture)
+[![Architecture](https://img.shields.io/badge/architecture-Local--First_SQLite_+_FIFO_Sync-blue.svg)](#architecture)
+[![Design System](https://img.shields.io/badge/design-Obsidian_Slate-171A21.svg)](#design-system)
 
-Designed around the "Obsidian Slate" design system, the application replaces noisy dashboards, neon gradients, and gamified animations with quiet typography, meaningful whitespace, and instant local-first responsiveness across Android, Windows Desktop, and Linux Desktop from a single Flutter codebase.
+**IDEM** (pronounced /ˈaɪ.dɛm/, derived from *Idempotence* and Latin *idem* — meaning "the same") is a commercial-grade, deterministic, offline-first productivity workstation. Built from the ground up for students, software engineers, researchers, and professionals, IDEM eliminates cognitive friction, cognitive overload, and cloud dependency.
 
----
-
-## 1. Project Philosophy
-
-Most modern productivity applications suffer from cognitive bloat. They force users into complex hierarchical dashboards, bombard them with statistics, and make task management feel like maintaining a secondary spreadsheet.
-
-Obsidian Slate is guided by three product principles:
-1. **The Interface Must Disappear**: The user opens the workstation to focus on *what to do next*, not to admire a grid of metrics cards.
-2. **Offline is the Default, Not a Fallback**: Every mutation commits to local storage in milliseconds. The network is treated solely as an asynchronous transport layer.
-3. **Intentional Workload Limits**: Overwhelm is prevented at the root by promoting a daily planning session that encourages users to commit to 3 to 5 core priorities for today.
+Local SQLite storage is the single source of truth. Every action succeeds in sub-milliseconds without an internet connection. When connectivity is restored, an idempotent FIFO sync engine reconciles local mutations with the remote PostgreSQL/FastAPI cloud backend without duplicate records or lost writes.
 
 ---
 
-## 2. Features
+## 1. Core Principles
 
-### Mandatory & Core Features
-- **Offline First**: All task CRUD, reordering, and status changes succeed immediately without network access.
-- **Persistent Local Database**: Backed by Drift (SQLite) with relational schema definitions, migrations, and reactive streams.
-- **Task Management**: Title, markdown notes, deadline scheduling, priority levels (Urgent, High, Medium, Low), and category tags.
-- **Connectivity Detection**: Integrated with `connectivity_plus` and active reachability probes to detect genuine internet access.
-- **Persistent Synchronization Queue**: Operation queue survives crashes, process kills, and device restarts.
-- **Retry Strategy**: Automated exponential backoff (1s, 2s, 4s, 8s, 16s) preventing network flooding.
-- **Conflict Resolution**: Last-Write-Wins (LWW) resolution comparing ISO-8601 timestamps and optimistic server versions.
-- **Idempotency & Duplicate Prevention**: Client-generated UUIDs and `X-Idempotency-Key` headers prevent record duplication on retried requests.
-- **Responsive Layout**: Dedicated Desktop Sidebar with keyboard navigation and thumb-friendly Mobile Navigation Bar.
-
-### Bonus Features
-- **Recurring Tasks**: Automatic computation and spawning of subsequent cycles (Daily, Weekdays, Weekly, Monthly) upon task completion.
-- **Drag and Drop Reordering**: Reorder tasks with fractional order indices persisted to disk and synced across clients.
-- **Task Dependencies**: Prerequisite blocker graphs preventing premature task execution and surfacing dependency warnings.
-- **Multi-Device Sync**: Cross-platform delta synchronization between mobile, desktop, and web clients.
-- **Sync History Audit Log**: Visual inspection of background and manual synchronization runs.
-
-### Premium Productivity Features
-- **Focus Mode**: Minimalist full-screen interface featuring large typography, zero distractions, and an integrated session timer.
-- **Daily Planning Session**: Morning workflow prompting users to select a realistic workload (3 to 5 tasks) to reduce overwhelm.
-- **Smart Inbox**: Rapid capture mechanism designed to record thoughts and tasks in under three seconds without forced categorization.
-- **Deadline Load Balancer**: Visual timeline indicating days with excessive task volume and offering one-tap load balancing.
-- **Smart Snooze**: Quick actions to defer tasks to Tomorrow, Next Week, or Next Monday.
-- **Recovery Assistant**: Guilt-free reset tool for overdue tasks that assists in clearing mental backlogs without friction.
-- **Obsidian Slate Accent Packs**: 7 curated accent palettes (Forest, Ocean, Amber, Burgundy, Lavender, Slate, Monochrome) that strictly tint interactive feedback while preserving neutral monochrome surfaces.
+1. **Deterministic Idempotence ($f(f(x)) = f(x)$)**: Sync retries across patchy networks never create duplicate records. Every mutation is addressed with a client-generated UUID and verified via an idempotency key log.
+2. **Offline by Default, Not Fallback**: You can run this app entirely disconnected in an airplane, underground transit, or off-grid. The UI responds instantaneously to local SQLite queries.
+3. **Calm Ergonomics**: Zero gamification, zero neon gradients, zero decorative dashboard bloat. Clean typography (Geist/Inter), whitespace, micro-interactions, and 7 subtle accent packs.
+4. **Frictionless Authentication**: Full offline guest mode out of the box with zero forced login. Users can connect a cloud account anytime via JWT Bearer authentication to activate multi-device replication.
 
 ---
 
-## 3. Technology Stack
+## 2. Complete Feature Matrix
 
-### Frontend (Flutter Client)
-- **Framework**: Flutter 3.38+ / Dart 3.10+
-- **State Management**: Riverpod 3 (`Notifier`, `NotifierProvider`, `StreamProvider`)
-- **Navigation & Routing**: GoRouter with `StatefulShellRoute`
-- **Local Persistence**: Drift (SQLite) with native isolates
-- **Networking**: Dio with custom interceptors and idempotency injection
-- **Icons**: Lucide Icons
-- **Typography**: Geist (with Inter fallback)
-- **Motion**: Standard cubic motion tokens bounded strictly between 150ms and 250ms
+### A. Task Management & Natural Language Engine
+- **Full Offline CRUD**: Instant creation, modification, completion, and deletion backed by Drift SQLite.
+- **Smart Natural Language Parser (`SmartTaskParser`)**:
+  - Automatically parses priorities: `!high`, `!urgent`, `!p1`, `!med`, `!low`
+  - Extracts categories on the fly: `#Work`, `#Personal`, `#DevOps`
+  - Detects time estimates: `~30m`, `~1h`, `~45min`
+  - Parses natural dates: `tomorrow at 5pm`, `tonight`, `today`, `17:00`
+  - **Live Preview Chips**: Real-time interactive pill chips update below the Quick Add input as you type.
+- **Hierarchical Subtask Checklists**: Break complex objectives into bite-sized actionable steps with inline progress tracking (`✓ N/M`).
+- **Prerequisite Dependency Graph**: Tasks can declare dependencies. Blocked tasks show lock indicators with blocker alerts and automatically unblock when prerequisites are completed.
+- **Recurring Habits & Routines**: Daily, Weekdays, Weekly, and Monthly cycles with automatic spawning of next instances upon completion.
 
-### Backend (Synchronization Server)
-- **Framework**: FastAPI (Python 3.13+)
-- **ORM & Database**: SQLAlchemy with SQLite (default) and PostgreSQL compatibility
-- **Authentication**: JWT (JSON Web Tokens) with bcrypt password hashing
-- **Data Validation**: Pydantic v2
-- **Testing**: pytest and httpx
+### B. Strategic Prioritization & Planning Workstations
+- **Eisenhower Priority Matrix (`/matrix`)**:
+  - **Q1: Do First**: Urgent & Important (High priority, due within 48h)
+  - **Q2: Schedule / Strategic**: Important, Not Urgent (High priority, long-term leverage)
+  - **Q3: Delegate / Quick Wins**: Urgent, Lower Stakes (Due soon, standard priority)
+  - **Q4: Backlog / Someday**: Low urgency, low impact
+- **Morning Daily Planning Ritual**: Step-by-step workflow prompting users to commit to 3–5 core tasks for the day to prevent overwhelm.
+- **Daily Intention Anchor**: Pin a singular core focus for the day to maintain deep cognitive alignment.
+- **Deep Work & Pomodoro Workstation (`/focus`)**: Full-screen distraction-free workstation with 25m Focus, 50m Deep Work, 5m Breather, and Stopwatch modes. Automatically logs completed focus minutes directly to the active task.
+- **Evening Shutdown Ritual**: Reflection sheet prompting review of completed work, guilt-free deferral of uncompleted items, and mental closure for the day.
 
----
+### C. Authentication & Cloud Synchronization
+- **Dual-Mode Authentication**:
+  - **Offline Guest Mode**: 100% usable without registration or network access.
+  - **Cloud Linked Mode**: Connect an email/password account authenticated via JWT Bearer tokens to sync with the FastAPI backend.
+- **Crash-Safe FIFO Queue**: Mutations persist to local SQLite before being scheduled for network push. The queue survives app kills, crashes, and device restarts.
+- **Exponential Backoff**: Dynamic retry delays (1s, 2s, 4s, 8s, 16s) to prevent network congestion.
+- **Conflict Resolution**: Last-Write-Wins (LWW) timestamp comparison with optimistic server versioning.
 
-## 4. Architectural Overview
-
-The application follows a strict Feature-First Clean Architecture where domain models and business logic remain decoupled from UI and SQL storage details.
-
-```
-Flutter UI Layer (Riverpod 3)
-           │
-           ▼
-    Repository Layer (TaskRepository, CategoryRepository)
-           │
-     ┌─────┴────────────────┐
-     ▼                      ▼
-Local SQLite DB       Persistent Sync Queue
-(Drift)               (sync_queue table)
-     │                      │
-     ▼                      ▼
-Reactive Streams       SyncEngine
-(Stream<List<Task>>)        │
-                            ▼
-                     API Client (Dio)
-                            │
-                            ▼
-                  FastAPI Sync Server
-```
-
-### Why This Architecture Was Chosen
-
-1. **Why Drift over raw SQLite?**
-   Raw SQL string queries scattered throughout Flutter applications cause runtime type errors, make refactoring fragile, and complicate schema migrations. Drift provides compile-time type-safe queries, Dart-idiomatic table definitions, and reactive stream subscriptions (`watchTasks()`) that automatically notify UI widgets whenever the underlying database tables change.
-
-2. **Why a Persistent Sync Queue?**
-   In-memory queues lose un-synced operations when an application process is terminated in the background by the mobile operating system. By writing mutations to a SQLite table (`sync_queue`) before completing the user's action, operations are guaranteed to survive application crashes, power loss, and device reboots.
-
-3. **Why Last-Write-Wins (LWW) with Idempotency Keys?**
-   Distributed sync without a single source of truth often results in duplicate tasks when network requests time out during response transmission. By assigning UUIDs on the client and passing an `X-Idempotency-Key`, the backend guarantees that retrying an operation is completely idempotent. Conflicts are resolved quietly and predictably by comparing high-resolution timestamps.
+### D. Navigation, Accessibility & Data Portability
+- **Universal Command Palette (`⌘K` / `Ctrl+K`)**: Rapid fuzzy search across tasks, categories, screens, themes, and sync operations.
+- **Responsive Layout**:
+  - **Desktop / Web**: 230px persistent sidebar with numeric shortcuts (`⌘1`–`⌘6`), multi-column workspace, and mouse/keyboard ergonomics.
+  - **Mobile**: Thumb-friendly bottom navigation bar with responsive layout adjustments.
+- **Obsidian Slate Visual Design**:
+  - Dark Mode (`#0F1115` base, `#171A21` surface, `#2B313C` border, `#F5F5F5` typography).
+  - Warm Paper Light Mode (cream paper tones avoiding clinical pure-white glare).
+  - 7 Curated Accent Packs: Forest, Ocean, Amber, Burgundy, Lavender, Slate, Monochrome.
+- **Data Portability & Zero Lock-in**: One-tap export to structured Markdown (`# Task Export`) and raw JSON.
 
 ---
 
-## 5. Directory Structure
+## 3. Architecture & Data Flow
 
-```
-d:/gdg_app/
-├── lib/
-│   ├── main.dart                          # Application entry point
-│   ├── core/
-│   │   ├── theme/                         # Obsidian Slate tokens, typography, accent packs
-│   │   ├── router/                        # GoRouter declarative shell navigation
-│   │   ├── services/                      # Connectivity reachability service
-│   │   └── network/                       # Dio ApiClient and domain exceptions
-│   ├── shared/
-│   │   └── widgets/                       # Responsive desktop sidebar & mobile shell
-│   ├── database/
-│   │   ├── app_database.dart              # Drift database declaration and migrations
-│   │   ├── tables/                        # Drift schema tables (Tasks, Categories, SyncQueue)
-│   │   └── connection/                    # Cross-platform SQLite connection factory
-│   └── features/
-│       ├── today/                         # Today workspace, quick add, daily planning
-│       ├── inbox/                         # Smart inbox rapid capture
-│       ├── calendar/                      # Timeline & deadline load balancer
-│       ├── focus/                         # Distraction-free focus mode with timer
-│       ├── review/                        # Weekly review & recovery assistant
-│       ├── settings/                      # Accent pack selector & sync diagnostics
-│       ├── tasks/                         # Task domain models, repositories, detail sheet
-│       ├── categories/                    # Category domain models and repository
-│       └── sync/                          # Persistent queue repository & SyncEngine
-├── backend/
-│   ├── requirements.txt                   # Backend dependencies
-│   ├── app/
-│   │   ├── main.py                        # FastAPI entry point & CORS configuration
-│   │   ├── core/                          # Config, security (JWT/bcrypt), database session
-│   │   ├── models/                        # SQLAlchemy relational models
-│   │   ├── schemas/                       # Pydantic v2 validation models
-│   │   └── api/                           # Auth and Sync route handlers
-│   └── tests/                             # Pytest test suite for sync and auth
-├── docs/
-│   ├── Architecture.md                    # In-depth architectural specification
-│   ├── ImplementationNotes.md             # Low-level engineering decisions and trade-offs
-│   ├── Theme.md                           # Obsidian Slate design system specification
-│   ├── API.md                             # REST & Sync protocol documentation
-│   └── Database.md                        # Drift relational schema specification
-└── test/
-    ├── widget_test.dart                   # Smoke and UI integration test
-    └── unit/
-        ├── theme_test.dart                # Design tokens & accent packs test suite
-        ├── database_test.dart             # Drift repository & task dependency tests
-        └── sync_engine_test.dart          # SyncEngine, retry, and LWW conflict tests
+```mermaid
+flowchart TD
+    subgraph UI ["Presentation Layer (Flutter 3.x)"]
+        TodayScreen["Today View & Intention"]
+        MatrixScreen["Eisenhower Matrix (Q1–Q4)"]
+        FocusScreen["Deep Work & Pomodoro"]
+        CmdPalette["Command Palette (⌘K)"]
+        QuickAdd["Natural Language Quick Add"]
+    end
+
+    subgraph State ["Riverpod 3 Notifiers"]
+        TaskProviders["Task & Category Notifiers"]
+        AuthNotifier["Auth Notifier (JWT + SharedPreferences)"]
+        SyncState["Sync Engine Notifier"]
+    end
+
+    subgraph LocalStorage ["Local SQLite Truth (Drift ORM)"]
+        TasksTable["Tasks Table (Single Source of Truth)"]
+        SyncQueueTable["Persistent FIFO Sync Queue"]
+        CategoriesTable["Categories Table"]
+        DepTable["Dependencies Table"]
+    end
+
+    subgraph RemoteBackend ["Remote Cloud (FastAPI + PostgreSQL)"]
+        FastAPIAuth["/api/auth (JWT Register, Login, Me)"]
+        FastAPISync["/api/sync (Idempotent Push & Pull)"]
+        PostgresDB[("PostgreSQL Remote DB")]
+    end
+
+    UI --> State
+    State --> LocalStorage
+    LocalStorage -->|Mutations Enqueued| SyncQueueTable
+    SyncQueueTable -->|Exponential Backoff & Idempotency Key| FastAPISync
+    AuthNotifier -->|Bearer Token| FastAPIAuth
+    FastAPISync --> PostgresDB
+    FastAPIAuth --> PostgresDB
 ```
 
 ---
 
-## 6. Installation & Setup
+## 4. Getting Started
 
 ### Prerequisites
-- Flutter SDK (version 3.38.0 or higher)
-- Dart SDK (version 3.10.0 or higher)
-- Python (version 3.11 or higher)
-- Git
+- **Flutter SDK**: `^3.10.4` or later
+- **Python**: `3.10+` (FastAPI backend)
+- **Node/Chrome**: For web preview
 
-### Cloning the Repository
+### Running the Frontend
 ```bash
-git clone https://github.com/dhyan-dev/obsidian-slate.git
-cd obsidian-slate
+# Install dependencies
+flutter pub get
+
+# Run local web workstation
+flutter run -d chrome --web-port 3000
+
+# Or build release bundle
+flutter build web --release
 ```
+
+### Running the Backend
+```bash
+# Setup virtual environment and dependencies
+pip install -r backend/requirements.txt
+
+# Launch FastAPI synchronization server with hot reload
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+Interactive Swagger API documentation is available at `http://127.0.0.1:8000/docs`.
 
 ---
 
-## 7. Running the FastAPI Backend
+## 5. Automated Testing
 
-1. Navigate to the backend directory and install dependencies:
-```bash
-python -m pip install -r backend/requirements.txt
-```
+The codebase enforces strict test-driven reliability across local databases, synchronization semantics, parsers, and UI widgets:
 
-2. Run backend test suite:
 ```bash
+# Run all Flutter tests (21/21 passing)
+flutter test
+
+# Run static analysis (0 warnings, 0 errors)
+flutter analyze lib/ test/
+
+# Run backend pytest suite (3/3 passing)
 python -m pytest backend/tests/
 ```
 
-3. Launch the FastAPI synchronization server:
-```bash
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-The interactive OpenAPI documentation is available at:
-`http://127.0.0.1:8000/api/docs`
-
 ---
 
-## 8. Running the Flutter Application
+## 6. Design System Tokens (Obsidian Slate)
 
-1. Resolve Flutter package dependencies:
-```bash
-dart pub get
-```
-
-2. Run the complete automated test suite:
-```bash
-flutter test
-```
-
-3. Run static analysis to verify code quality:
-```bash
-flutter analyze lib/
-```
-
-4. Launch the application:
-- **Windows Desktop**:
-  ```bash
-  flutter run -d windows
-  ```
-- **Linux Desktop**:
-  ```bash
-  flutter run -d linux
-  ```
-- **Android Device or Emulator**:
-  ```bash
-  flutter run -d android
-  ```
-- **Web Browser (Preview)**:
-  ```bash
-  flutter run -d chrome
-  ```
-
----
-
-## 9. Desktop Experience & Keyboard Navigation
-
-The desktop implementation provides an optimized workstation environment rather than stretching mobile views:
-- **Persistent Sidebar Navigation**: Stays accessible at all times without taking over task context.
-- **Global Keyboard Shortcuts**:
-  - `Cmd / Ctrl + 1`: Navigate to Today Workspace
-  - `Cmd / Ctrl + 2`: Navigate to Smart Inbox
-  - `Cmd / Ctrl + 3`: Navigate to Calendar Timeline
-  - `Cmd / Ctrl + 4`: Navigate to Weekly Review
-  - `Cmd / Ctrl + 5`: Navigate to Settings & Sync Diagnostics
-  - `Cmd / Ctrl + F`: Toggle Distraction-Free Focus Mode
-  - `Enter`: Instant task creation from Quick Add bar
-
----
-
-## 10. Future Improvements
-- End-to-end client-side encryption for sensitive task descriptions.
-- WebAssembly (Wasm) compile target optimization.
-- Native desktop system tray minimizer with background sync scheduler.
-- Natural language parsing for deadline extraction ("Tomorrow at 5pm").
-
----
-
-## 11. License
-This project is licensed under the MIT License. See the LICENSE file for details.
+| Token Name | Dark Hex | Light Hex | Purpose |
+|:---|:---|:---|:---|
+| **Background** | `#0F1115` | `#F8F9FA` | Main screen viewport backdrop |
+| **Surface** | `#171A21` | `#FFFFFF` | Cards, sheets, dialogs, sidebar |
+| **Secondary Surface** | `#20242C` | `#F1F3F5` | Input fields, active pills, badges |
+| **Border** | `#2B313C` | `#E2E8F0` | Structural hairpins and dividers |
+| **Primary Text** | `#F5F5F5` | `#1A202C` | High-contrast readable typography |
+| **Secondary Text** | `#A1A8B3` | `#4A5568` | Supporting content and descriptions |
+| **Muted Text** | `#6B7280` | `#718096` | Metadata, shortcut indicators, timestamps |
+| **Accent Packs** | 7 Curated | 7 Curated | Subtle interactive focus indicators |

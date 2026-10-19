@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/models/task_priority.dart';
+import '../../tasks/models/recurring_rule.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../tasks/widgets/task_detail_sheet.dart';
 import '../../categories/providers/category_providers.dart';
@@ -251,6 +252,52 @@ class TodayTaskItem extends ConsumerWidget {
                               completedSubtasks == subtasks.length ? context.accent : context.mutedText,
                               fontSize: 9,
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Recurring Routine Badge
+                  if (task.recurringRule != RecurringRule.none)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.repeat, size: 9, color: context.accent),
+                          const SizedBox(width: 4),
+                          Text(
+                            task.recurringRule.displayName,
+                            style: AppTypography.code(context.accent, fontSize: 9),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Focus Time Spent Badge
+                  if (task.timeSpentMinutes > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: context.border, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.timer, size: 9, color: context.mutedText),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task.timeSpentMinutes}m focused',
+                            style: AppTypography.code(context.mutedText, fontSize: 9),
                           ),
                         ],
                       ),

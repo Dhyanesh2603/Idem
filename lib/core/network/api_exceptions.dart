@@ -32,3 +32,7 @@ class ServerException extends ApiException {
     super.statusCode = 500,
   ]);
 }
+
+class UnknownApiException extends ApiException {
+  const UnknownApiException([super.message = 'An unexpected error occurred']);
+}

@@ -11,6 +11,8 @@ import '../../sync/services/sync_engine.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../../../database/database_provider.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../../auth/widgets/auth_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -22,6 +24,7 @@ class SettingsScreen extends ConsumerWidget {
     final syncEngine = ref.watch(syncEngineProvider);
     final syncState = ref.watch(syncStateProvider);
     final syncQueueRepo = ref.watch(syncQueueRepositoryProvider);
+    final authState = ref.watch(authNotifierProvider);
 
     return Scaffold(
       backgroundColor: context.background,
@@ -41,6 +44,115 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               'Settings',
               style: AppTypography.displayLarge(context.primaryText),
+            ),
+            const SizedBox(height: 24),
+
+            // --- Account & Cloud Identity Section ---
+            Text(
+              'ACCOUNT & CLOUD IDENTITY',
+              style: AppTypography.labelSmall(context.mutedText).copyWith(letterSpacing: 1.2),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: context.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.border, width: 1),
+              ),
+              child: authState.isAuthenticated
+                  ? Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: context.accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: context.accent, width: 1),
+                          ),
+                          child: Center(
+                            child: Icon(LucideIcons.userCheck, size: 20, color: context.accent),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    authState.user!.email,
+                                    style: AppTypography.bodyMedium(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.green.withValues(alpha: 0.5), width: 0.8),
+                                    ),
+                                    child: Text(
+                                      'ONLINE & SYNCED',
+                                      style: AppTypography.code(Colors.greenAccent, fontSize: 9).copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'UUID: ${authState.user!.id.substring(0, authState.user!.id.length > 8 ? 8 : authState.user!.id.length)}... • Cloud replication active',
+                                style: AppTypography.code(context.mutedText, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => ref.read(authNotifierProvider.notifier).logout(),
+                          child: const Text('Sign Out'),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: context.secondarySurface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: context.border, width: 1),
+                          ),
+                          child: Center(
+                            child: Icon(LucideIcons.shield, size: 20, color: context.mutedText),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Local Offline Guest Mode',
+                                style: AppTypography.bodyMedium(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Data stored locally in SQLite. Connect account for cross-device sync.',
+                                style: AppTypography.bodySmall(context.mutedText),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => AuthDialog.show(context),
+                          icon: const Icon(LucideIcons.logIn, size: 14, color: Colors.black),
+                          label: const Text('Connect'),
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: 24),
 

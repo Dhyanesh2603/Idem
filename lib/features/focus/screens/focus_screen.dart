@@ -69,6 +69,10 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
             setState(() => _remainingSeconds--);
           } else {
             _timer?.cancel();
+            final minutesSpent = _mode.initialSeconds ~/ 60;
+            if (minutesSpent > 0) {
+              _logCompletedMinutes(minutesSpent);
+            }
             setState(() {
               _isRunning = false;
               _completedSessionsToday++;
@@ -77,6 +81,19 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
           }
         }
       });
+    }
+  }
+
+  void _logCompletedMinutes(int minutes) async {
+    final todayTasksAsync = ref.read(todayTasksStreamProvider);
+    final focusTasks = (todayTasksAsync.asData?.value ?? [])
+        .where((t) => t.isFocus && !t.isCompleted)
+        .toList();
+    if (focusTasks.isNotEmpty && _currentTaskIndex < focusTasks.length) {
+      final active = focusTasks[_currentTaskIndex];
+      await ref.read(taskRepositoryProvider).updateTask(
+        active.copyWith(timeSpentMinutes: active.timeSpentMinutes + minutes),
+      );
     }
   }
 

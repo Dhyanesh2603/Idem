@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
+import 'package:intl/intl.dart';
 import '../../tasks/models/task_priority.dart';
+import '../../tasks/services/smart_task_parser.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../../database/database_provider.dart';
 
@@ -31,6 +33,7 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(() => setState(() {}));
     if (widget.isTodayDefault) {
       _selectedDeadline = DateTime.now();
     }
@@ -44,18 +47,40 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
   }
 
   Future<void> _submit() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty || _isSubmitting) return;
+    final rawText = _controller.text.trim();
+    if (rawText.isEmpty || _isSubmitting) return;
 
     setState(() => _isSubmitting = true);
     final repo = ref.read(taskRepositoryProvider);
+    final categories = ref.read(categoriesStreamProvider).asData?.value ?? [];
 
     try {
+      final parsed = SmartTaskParser.parse(rawText);
+
+      final finalPriority = _selectedPriority != TaskPriority.none
+          ? _selectedPriority
+          : parsed.priority;
+
+      String? finalCategoryId = _selectedCategoryId;
+      if (finalCategoryId == null && parsed.categoryName != null) {
+        final match = categories
+            .where((c) => c.name.toLowerCase() == parsed.categoryName!.toLowerCase())
+            .firstOrNull;
+        if (match != null) {
+          finalCategoryId = match.id;
+        }
+      }
+
+      final finalDeadline = _selectedDeadline ??
+          parsed.deadline ??
+          (widget.isTodayDefault ? DateTime.now() : null);
+
       await repo.createTask(
-        title: text,
-        priority: _selectedPriority,
-        categoryId: _selectedCategoryId,
-        deadline: _selectedDeadline ?? (widget.isTodayDefault ? DateTime.now() : null),
+        title: parsed.title,
+        priority: finalPriority,
+        categoryId: finalCategoryId,
+        deadline: finalDeadline,
+        estimatedMinutes: parsed.estimatedMinutes ?? 0,
       );
       _controller.clear();
       setState(() {
@@ -180,71 +205,167 @@ class _QuickAddBarState extends ConsumerState<QuickAddBar> {
             ],
           ),
 
-          // Active Tags Strip (if category or priority selected)
-          if (_selectedPriority != TaskPriority.none || selectedCategory != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6, left: 30),
-              child: Row(
-                children: [
-                  if (_selectedPriority != TaskPriority.none)
-                    Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _selectedPriority.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: _selectedPriority.color.withValues(alpha: 0.3), width: 0.8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.flag, size: 10, color: _selectedPriority.color),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedPriority.displayName,
-                            style: AppTypography.code(_selectedPriority.color, fontSize: 10),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => setState(() => _selectedPriority = TaskPriority.none),
-                            child: Icon(LucideIcons.x, size: 10, color: _selectedPriority.color),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (selectedCategory != null)
-                    Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.4),
-                          width: 0.8,
+          // Active & Parsed Smart Tags Strip
+          Builder(
+            builder: (context) {
+              final rawText = _controller.text.trim();
+              final parsed = rawText.isNotEmpty ? SmartTaskParser.parse(rawText) : null;
+              final hasActiveTags = _selectedPriority != TaskPriority.none || selectedCategory != null;
+              final hasParsedTags = parsed != null && (
+                (parsed.priority != TaskPriority.none && _selectedPriority == TaskPriority.none) ||
+                (parsed.categoryName != null && selectedCategory == null) ||
+                parsed.deadline != null ||
+                parsed.estimatedMinutes != null
+              );
+
+              if (!hasActiveTags && !hasParsedTags) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6, left: 30),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (_selectedPriority != TaskPriority.none)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _selectedPriority.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: _selectedPriority.color.withValues(alpha: 0.3), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.flag, size: 10, color: _selectedPriority.color),
+                            const SizedBox(width: 4),
+                            Text(
+                              _selectedPriority.displayName,
+                              style: AppTypography.code(_selectedPriority.color, fontSize: 10),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => setState(() => _selectedPriority = TaskPriority.none),
+                              child: Icon(LucideIcons.x, size: 10, color: _selectedPriority.color),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '# ${selectedCategory.name}',
-                            style: AppTypography.code(
-                              Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))),
-                              fontSize: 10,
+                    if (selectedCategory != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.4),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '# ${selectedCategory.name}',
+                              style: AppTypography.code(
+                                Color(int.parse(selectedCategory.colorHex.replaceFirst('#', '0xFF'))),
+                                fontSize: 10,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => setState(() => _selectedCategoryId = null),
-                            child: Icon(LucideIcons.x, size: 10, color: context.mutedText),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => setState(() => _selectedCategoryId = null),
+                              child: Icon(LucideIcons.x, size: 10, color: context.mutedText),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                    // Live Natural Language Parsed Chips
+                    if (parsed != null && parsed.priority != TaskPriority.none && _selectedPriority == TaskPriority.none)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: parsed.priority.color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: parsed.priority.color.withValues(alpha: 0.4), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.zap, size: 10, color: parsed.priority.color),
+                            const SizedBox(width: 4),
+                            Text(
+                              parsed.priority.displayName,
+                              style: AppTypography.code(parsed.priority.color, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (parsed != null && parsed.categoryName != null && selectedCategory == null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: context.accent.withValues(alpha: 0.4), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.tag, size: 10, color: context.accent),
+                            const SizedBox(width: 4),
+                            Text(
+                              '#${parsed.categoryName}',
+                              style: AppTypography.code(context.accent, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (parsed != null && parsed.deadline != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.secondarySurface,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: context.border, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.calendar, size: 10, color: context.secondaryText),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('EEE, MMM d • h:mm a').format(parsed.deadline!),
+                              style: AppTypography.code(context.secondaryText, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (parsed != null && parsed.estimatedMinutes != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: context.secondarySurface,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: context.border, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.clock, size: 10, color: context.mutedText),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${parsed.estimatedMinutes}m',
+                              style: AppTypography.code(context.mutedText, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

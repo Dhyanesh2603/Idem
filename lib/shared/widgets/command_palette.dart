@@ -11,6 +11,8 @@ import '../../features/tasks/widgets/task_detail_sheet.dart';
 import '../../features/today/widgets/daily_planning_sheet.dart';
 import '../../features/categories/widgets/create_category_sheet.dart';
 import '../../features/sync/providers/sync_providers.dart';
+import '../../features/auth/providers/auth_providers.dart';
+import '../../features/auth/widgets/auth_dialog.dart';
 
 class CommandPalette extends ConsumerStatefulWidget {
   const CommandPalette({super.key});
@@ -208,6 +210,21 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                       },
                     ),
                     _CommandItem(
+                      icon: LucideIcons.userCheck,
+                      title: ref.watch(authNotifierProvider).isAuthenticated
+                          ? 'Account: ${ref.watch(authNotifierProvider).user!.email}'
+                          : 'Connect Cloud Account / Sign In',
+                      shortcut: 'Auth',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        if (ref.read(authNotifierProvider).isAuthenticated) {
+                          context.go('/settings');
+                        } else {
+                          AuthDialog.show(context);
+                        }
+                      },
+                    ),
+                    _CommandItem(
                       icon: LucideIcons.sunMedium,
                       title: 'Toggle Theme (Dark / Warm Paper)',
                       shortcut: 'Theme',
@@ -253,9 +270,18 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                       },
                     ),
                     _CommandItem(
+                      icon: LucideIcons.layoutGrid,
+                      title: 'Go to Priority Matrix (Eisenhower)',
+                      shortcut: '⌘4',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/matrix');
+                      },
+                    ),
+                    _CommandItem(
                       icon: LucideIcons.checkSquare,
                       title: 'Go to Reflection & Review',
-                      shortcut: '⌘4',
+                      shortcut: '⌘5',
                       onTap: () {
                         Navigator.of(context).pop();
                         context.go('/review');
@@ -264,7 +290,7 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                     _CommandItem(
                       icon: LucideIcons.settings,
                       title: 'Go to Settings & Sync History',
-                      shortcut: '⌘5',
+                      shortcut: '⌘6',
                       onTap: () {
                         Navigator.of(context).pop();
                         context.go('/settings');

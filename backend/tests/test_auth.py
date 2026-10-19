@@ -36,4 +36,20 @@ def test_register_and_login():
         json={"email": email, "password": password},
     )
     assert login_res.status_code == 200
-    assert "access_token" in login_res.json()
+    token = login_res.json()["access_token"]
+    assert token
+
+    # Get /me with valid token
+    me_res = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert me_res.status_code == 200
+    assert me_res.json()["email"] == email
+
+    # Get /me with invalid token should fail
+    unauth_res = client.get(
+        "/api/auth/me",
+        headers={"Authorization": "Bearer invalid_token_xyz"},
+    )
+    assert unauth_res.status_code == 401

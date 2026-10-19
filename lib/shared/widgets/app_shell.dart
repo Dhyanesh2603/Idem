@@ -54,6 +54,9 @@ class AppShell extends ConsumerWidget {
               case LogicalKeyboardKey.digit5:
                 _onNavigate(4, context);
                 return KeyEventResult.handled;
+              case LogicalKeyboardKey.digit6:
+                _onNavigate(5, context);
+                return KeyEventResult.handled;
               case LogicalKeyboardKey.keyF:
                 context.push('/focus');
                 return KeyEventResult.handled;
@@ -100,6 +103,11 @@ class AppShell extends ConsumerWidget {
                     icon: Icon(LucideIcons.calendar),
                     selectedIcon: Icon(LucideIcons.calendar),
                     label: 'Calendar',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(LucideIcons.layoutGrid),
+                    selectedIcon: Icon(LucideIcons.layoutGrid),
+                    label: 'Matrix',
                   ),
                   NavigationDestination(
                     icon: Icon(LucideIcons.checkCheck),
@@ -260,11 +268,18 @@ class _DesktopSidebar extends ConsumerWidget {
                   onTap: () => onNavigate(2),
                 ),
                 _SidebarItem(
-                  icon: LucideIcons.checkCheck,
-                  label: 'Review',
+                  icon: LucideIcons.layoutGrid,
+                  label: 'Matrix',
                   shortcut: '4',
                   isSelected: currentIndex == 3,
                   onTap: () => onNavigate(3),
+                ),
+                _SidebarItem(
+                  icon: LucideIcons.checkCheck,
+                  label: 'Review',
+                  shortcut: '5',
+                  isSelected: currentIndex == 4,
+                  onTap: () => onNavigate(4),
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
@@ -279,9 +294,9 @@ class _DesktopSidebar extends ConsumerWidget {
                 _SidebarItem(
                   icon: LucideIcons.settings,
                   label: 'Settings',
-                  shortcut: '5',
-                  isSelected: currentIndex == 4,
-                  onTap: () => onNavigate(4),
+                  shortcut: '6',
+                  isSelected: currentIndex == 5,
+                  onTap: () => onNavigate(5),
                 ),
               ],
             ),

@@ -8,6 +8,7 @@ import '../../features/calendar/screens/calendar_screen.dart';
 import '../../features/review/screens/review_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/focus/screens/focus_screen.dart';
+import '../../features/matrix/screens/matrix_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'rootNav');
@@ -50,7 +51,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Branch 3: Reflection & Review
+          // Branch 3: Priority Matrix (Eisenhower)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/matrix',
+                builder: (context, state) => const MatrixScreen(),
+              ),
+            ],
+          ),
+          // Branch 4: Reflection & Review
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -59,7 +69,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Branch 4: Preferences & Settings
+          // Branch 5: Preferences & Settings
           StatefulShellBranch(
             routes: [
               GoRoute(
