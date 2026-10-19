@@ -13,6 +13,7 @@ import '../../features/categories/widgets/create_category_sheet.dart';
 import '../../features/sync/providers/sync_providers.dart';
 import '../../features/auth/providers/auth_providers.dart';
 import '../../features/auth/widgets/auth_dialog.dart';
+import '../../features/focus/widgets/soundscape_selector_sheet.dart';
 
 class CommandPalette extends ConsumerStatefulWidget {
   const CommandPalette({super.key});
@@ -184,6 +185,24 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                       onTap: () {
                         Navigator.of(context).pop();
                         context.go('/focus');
+                      },
+                    ),
+                    _CommandItem(
+                      icon: LucideIcons.columns,
+                      title: 'Open Linear Kanban Board',
+                      shortcut: '⌘B',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.go('/board');
+                      },
+                    ),
+                    _CommandItem(
+                      icon: LucideIcons.headphones,
+                      title: 'Ambient Focus Soundscapes & Binaural Beats',
+                      shortcut: 'Sound',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        SoundscapeSelectorSheet.show(context);
                       },
                     ),
                     _CommandItem(

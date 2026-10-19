@@ -11,6 +11,7 @@ import '../widgets/daily_planning_sheet.dart';
 import '../widgets/quick_add_bar.dart';
 import '../widgets/daily_intention_card.dart';
 import '../widgets/shutdown_sheet.dart';
+import '../widgets/time_block_timeline.dart';
 import '../../../shared/widgets/command_palette.dart';
 import '../../tasks/models/task_model.dart';
 import '../../tasks/providers/task_providers.dart';
@@ -18,6 +19,11 @@ import '../../tasks/services/deadline_notification_service.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../categories/widgets/create_category_sheet.dart';
 import '../../../database/database_provider.dart';
+import '../../habits/widgets/daily_rituals_bar.dart';
+import '../../board/screens/board_screen.dart';
+import '../widgets/auto_schedule_dialog.dart';
+
+enum TodayViewMode { list, timeline, board }
 
 class TodayScreen extends ConsumerStatefulWidget {
   const TodayScreen({super.key});
@@ -31,6 +37,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   String _searchQuery = '';
   bool _showSearch = false;
   bool _showCompleted = true;
+  TodayViewMode _viewMode = TodayViewMode.list;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -138,6 +145,17 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                           style: AppTypography.labelMedium(context.primaryText),
                         ),
                       ),
+                      const SizedBox(width: 4),
+
+                      // Algorithmic Auto-Scheduler
+                      IconButton(
+                        tooltip: 'Algorithmic Day Orchestrator',
+                        icon: Icon(LucideIcons.wand2, size: 16, color: context.accent),
+                        onPressed: () {
+                          final tasks = todayTasksAsync.asData?.value ?? [];
+                          AutoScheduleDialog.show(context, tasks);
+                        },
+                      ),
                     ],
                   ),
                 ],
@@ -212,6 +230,9 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             // Daily Intention / North Star Focus Card
             const DailyIntentionCard(),
 
+            // Daily Rituals & Habit Cadence Tracker
+            const DailyRitualsBar(),
+
             // Daily Horizon Progress Bar (shows if any tasks exist)
             todayTasksAsync.maybeWhen(
               data: (tasks) {
@@ -280,6 +301,24 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
               child: Row(
                 children: [
+                  // View Switcher (List vs Timeline vs Board)
+                  Container(
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: context.secondarySurface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: context.border, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildViewTab(TodayViewMode.list, 'List', LucideIcons.list),
+                        _buildViewTab(TodayViewMode.timeline, 'Timeline', LucideIcons.clock),
+                        _buildViewTab(TodayViewMode.board, 'Board', LucideIcons.columns),
+                      ],
+                    ),
+                  ),
                   _CategoryFilterPill(
                     label: 'All',
                     isSelected: _selectedCategoryId == null,
@@ -348,6 +387,16 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
             Expanded(
               child: todayTasksAsync.when(
                 data: (tasks) {
+                  if (_viewMode == TodayViewMode.board) {
+                    return const BoardScreen();
+                  }
+                  if (_viewMode == TodayViewMode.timeline) {
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      child: TimeBlockTimeline(todayTasks: tasks),
+                    );
+                  }
+
                   // Apply active filters (search and category)
                   var filtered = tasks;
                   if (_selectedCategoryId != null) {
@@ -496,6 +545,28 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewTab(TodayViewMode mode, String label, IconData icon) {
+    final isSel = _viewMode == mode;
+    return InkWell(
+      onTap: () => setState(() => _viewMode = mode),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSel ? context.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 11, color: isSel ? context.accent : context.mutedText),
+            const SizedBox(width: 4),
+            Text(label, style: AppTypography.code(isSel ? context.primaryText : context.mutedText, fontSize: 10)),
           ],
         ),
       ),

@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import '../../../database/database_provider.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/widgets/auth_dialog.dart';
+import '../../tasks/services/smart_task_parser.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -360,49 +361,51 @@ class SettingsScreen extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: context.border, width: 1),
               ),
-              child: Row(
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(LucideIcons.fileCode, size: 15),
-                      label: const Text('Export JSON'),
-                      onPressed: () async {
-                        final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
-                        final categories = await ref.read(categoryRepositoryProvider).getCategories();
-                        final exportMap = {
-                          'exportedAt': DateTime.now().toIso8601String(),
-                          'categories': categories.map((c) => c.toJson()).toList(),
-                          'tasks': tasks.map((t) => t.toJson()).toList(),
-                        };
-                        final jsonStr = const JsonEncoder.withIndent('  ').convert(exportMap);
-                        if (context.mounted) {
-                          _showExportDialog(context, 'JSON Backup', jsonStr);
-                        }
-                      },
-                    ),
+                  OutlinedButton.icon(
+                    icon: const Icon(LucideIcons.fileCode, size: 15),
+                    label: const Text('Export JSON'),
+                    onPressed: () async {
+                      final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
+                      final categories = await ref.read(categoryRepositoryProvider).getCategories();
+                      final exportMap = {
+                        'exportedAt': DateTime.now().toIso8601String(),
+                        'categories': categories.map((c) => c.toJson()).toList(),
+                        'tasks': tasks.map((t) => t.toJson()).toList(),
+                      };
+                      final jsonStr = const JsonEncoder.withIndent('  ').convert(exportMap);
+                      if (context.mounted) {
+                        _showExportDialog(context, 'JSON Backup', jsonStr);
+                      }
+                    },
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(LucideIcons.fileText, size: 15),
-                      label: const Text('Export Markdown'),
-                      onPressed: () async {
-                        final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
-                        final buffer = StringBuffer();
-                        buffer.writeln('# Task Export — ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n');
-                        buffer.writeln('## Active Tasks');
-                        for (final t in tasks.where((t) => !t.isCompleted)) {
-                          buffer.writeln('- [ ] ${t.title}${t.priority.name != 'none' ? ' [${t.priority.displayName}]' : ''}');
-                        }
-                        buffer.writeln('\n## Completed Tasks');
-                        for (final t in tasks.where((t) => t.isCompleted)) {
-                          buffer.writeln('- [x] ${t.title}');
-                        }
-                        if (context.mounted) {
-                          _showExportDialog(context, 'Markdown Checklist', buffer.toString());
-                        }
-                      },
-                    ),
+                  OutlinedButton.icon(
+                    icon: const Icon(LucideIcons.fileText, size: 15),
+                    label: const Text('Export Markdown'),
+                    onPressed: () async {
+                      final tasks = await ref.read(taskRepositoryProvider).watchTasks().first;
+                      final buffer = StringBuffer();
+                      buffer.writeln('# Task Export — ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n');
+                      buffer.writeln('## Active Tasks');
+                      for (final t in tasks.where((t) => !t.isCompleted)) {
+                        buffer.writeln('- [ ] ${t.title}${t.priority.name != 'none' ? ' [${t.priority.displayName}]' : ''}');
+                      }
+                      buffer.writeln('\n## Completed Tasks');
+                      for (final t in tasks.where((t) => t.isCompleted)) {
+                        buffer.writeln('- [x] ${t.title}');
+                      }
+                      if (context.mounted) {
+                        _showExportDialog(context, 'Markdown Checklist', buffer.toString());
+                      }
+                    },
+                  ),
+                  FilledButton.icon(
+                    icon: const Icon(LucideIcons.filePlus2, size: 15),
+                    label: const Text('Import Markdown Checklist'),
+                    onPressed: () => _showImportMarkdownDialog(context, ref),
                   ),
                 ],
               ),
@@ -526,6 +529,106 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImportMarkdownDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.surface,
+        title: Row(
+          children: [
+            Icon(LucideIcons.filePlus2, size: 18, color: context.accent),
+            const SizedBox(width: 8),
+            Text('Import Markdown Tasks', style: AppTypography.titleMedium(context.primaryText)),
+          ],
+        ),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Paste markdown checklist lines or notes. Tags like #Work, priorities like !high, estimates like ~30m, and deadlines like "tomorrow" will be parsed automatically.',
+                style: AppTypography.bodySmall(context.secondaryText),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 8,
+                style: AppTypography.code(context.primaryText, fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: "- [ ] Complete auth integration #Dev !high ~45m\n- [ ] Design tokens review #Design !p1\n- [ ] Team sync at 4pm",
+                  hintStyle: AppTypography.code(context.mutedText, fontSize: 11),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  filled: true,
+                  fillColor: context.secondarySurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.of(ctx).pop();
+
+              final lines = text.split('\n');
+              final repo = ref.read(taskRepositoryProvider);
+              final categories = await ref.read(categoryRepositoryProvider).getCategories();
+              int count = 0;
+
+              for (var line in lines) {
+                line = line.trim();
+                if (line.isEmpty) continue;
+                final cleaned = line
+                    .replaceFirst(RegExp(r'^[*\-]\s*\[[\sxX]\]\s*'), '')
+                    .replaceFirst(RegExp(r'^[*\-]\s*'), '')
+                    .trim();
+                if (cleaned.isEmpty) continue;
+
+                final parsed = SmartTaskParser.parse(cleaned);
+
+                String? catId;
+                if (parsed.categoryName != null) {
+                  final match = categories.where(
+                    (c) => c.name.toLowerCase() == parsed.categoryName!.toLowerCase(),
+                  ).firstOrNull;
+                  catId = match?.id;
+                }
+
+                await repo.createTask(
+                  title: parsed.title,
+                  categoryId: catId,
+                  priority: parsed.priority,
+                  estimatedMinutes: parsed.estimatedMinutes ?? 0,
+                  deadline: parsed.deadline,
+                );
+                count++;
+              }
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Successfully imported $count tasks from Markdown!'),
+                    backgroundColor: context.surface,
+                  ),
+                );
+              }
+            },
+            child: const Text('Import Tasks'),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../../database/database_provider.dart';
+import '../widgets/contribution_heatmap.dart';
 
 class ReviewScreen extends ConsumerWidget {
   const ReviewScreen({super.key});
@@ -118,6 +119,10 @@ class ReviewScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 28),
             ],
+
+            // GitHub-Style 365-Day Contribution Heatmap & Streaks
+            ContributionHeatmap(allTasks: allTasks),
+            const SizedBox(height: 28),
 
             // Calm Typographical Progress Section
             Text(

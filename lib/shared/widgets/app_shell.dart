@@ -8,6 +8,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/app_colors.dart';
 import 'sync_status_badge.dart';
 import 'command_palette.dart';
+import 'quick_scratchpad_sheet.dart';
+import 'workstation_header.dart';
 
 /// Responsive application shell providing:
 /// - Desktop (>= 768px): Persistent, spacious sidebar navigation with keyboard hints
@@ -57,8 +59,15 @@ class AppShell extends ConsumerWidget {
               case LogicalKeyboardKey.digit6:
                 _onNavigate(5, context);
                 return KeyEventResult.handled;
+              case LogicalKeyboardKey.digit7:
+              case LogicalKeyboardKey.keyB:
+                _onNavigate(6, context);
+                return KeyEventResult.handled;
               case LogicalKeyboardKey.keyF:
                 context.push('/focus');
+                return KeyEventResult.handled;
+              case LogicalKeyboardKey.keyJ:
+                QuickScratchpadSheet.show(context);
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.keyK:
                 CommandPalette.show(context);
@@ -78,7 +87,12 @@ class AppShell extends ConsumerWidget {
                   ),
                   const VerticalDivider(width: 1),
                   Expanded(
-                    child: navigationShell,
+                    child: Column(
+                      children: [
+                        const WorkstationTopHeader(),
+                        Expanded(child: navigationShell),
+                      ],
+                    ),
                   ),
                 ],
               )
@@ -275,6 +289,13 @@ class _DesktopSidebar extends ConsumerWidget {
                   onTap: () => onNavigate(3),
                 ),
                 _SidebarItem(
+                  icon: LucideIcons.columns,
+                  label: 'Board',
+                  shortcut: 'B',
+                  isSelected: currentIndex == 6,
+                  onTap: () => onNavigate(6),
+                ),
+                _SidebarItem(
                   icon: LucideIcons.checkCheck,
                   label: 'Review',
                   shortcut: '5',
@@ -290,6 +311,13 @@ class _DesktopSidebar extends ConsumerWidget {
                   shortcut: 'F',
                   isSelected: false,
                   onTap: () => context.push('/focus'),
+                ),
+                _SidebarItem(
+                  icon: LucideIcons.feather,
+                  label: 'Scratchpad',
+                  shortcut: 'J',
+                  isSelected: false,
+                  onTap: () => QuickScratchpadSheet.show(context),
                 ),
                 _SidebarItem(
                   icon: LucideIcons.settings,

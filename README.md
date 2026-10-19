@@ -1,6 +1,6 @@
 # IDEM — Offline-First Workstation
 
-[![Flutter Tests](https://img.shields.io/badge/flutter_tests-21%2F21_passed-brightgreen.svg)](#automated-testing)
+[![Flutter Tests](https://img.shields.io/badge/flutter_tests-29%2F29_passed-brightgreen.svg)](#automated-testing)
 [![FastAPI Backend Tests](https://img.shields.io/badge/backend_tests-3%2F3_passed-brightgreen.svg)](#backend-architecture)
 [![Architecture](https://img.shields.io/badge/architecture-Local--First_SQLite_+_FIFO_Sync-blue.svg)](#architecture)
 [![Design System](https://img.shields.io/badge/design-Obsidian_Slate-171A21.svg)](#design-system)
@@ -40,12 +40,46 @@ Local SQLite storage is the single source of truth. Every action succeeds in sub
   - **Q2: Schedule / Strategic**: Important, Not Urgent (High priority, long-term leverage)
   - **Q3: Delegate / Quick Wins**: Urgent, Lower Stakes (Due soon, standard priority)
   - **Q4: Backlog / Someday**: Low urgency, low impact
-- **Morning Daily Planning Ritual**: Step-by-step workflow prompting users to commit to 3–5 core tasks for the day to prevent overwhelm.
-- **Daily Intention Anchor**: Pin a singular core focus for the day to maintain deep cognitive alignment.
-- **Deep Work & Pomodoro Workstation (`/focus`)**: Full-screen distraction-free workstation with 25m Focus, 50m Deep Work, 5m Breather, and Stopwatch modes. Automatically logs completed focus minutes directly to the active task.
-- **Evening Shutdown Ritual**: Reflection sheet prompting review of completed work, guilt-free deferral of uncompleted items, and mental closure for the day.
+- **Linear-Grade Visual Kanban Workstation (`/board`)**:
+  - 4 Strategic Obsidian Slate Swimlanes: `Backlog`, `To Do`, `In Progress`, and `Done`.
+  - Rapid card movement with left/right directional shortcuts and quick dropdowns.
+  - Subtask completion progress indicators (`✓ 3/5`), priority color pills (`P1`–`P4`), and inline card creation.
+  - Seamlessly switchable directly within Today (`List` | `Timeline` | `Board`) or via dedicated workstation route (`⌘B` / `/board`).
+- **Algorithmic Day Orchestrator (`SmartDayScheduler`)**:
+  - 1-click intelligent day scheduler that packs pending tasks into energy-aligned blocks starting at 9:00 AM.
+  - Prioritizes P1/P2 cognitive load for morning focus, protects a 45m lunch/recharge buffer at 12:30 PM, and slates routine execution for afternoons.
+  - Evaluates total daily cognitive load (`Light`, `Optimal`, `Heavy`) and writes synchronized time-blocks directly to SQLite.
+- **Daily Habits & Routines Cadence Engine**:
+  - Persistent daily rituals strip with real-time streak flame counter (`🔥 7d`).
+  - Tactile completion feedback, daily reset tracking, and custom habit creation with time-of-day slots (`Morning`, `Afternoon`, `Evening`).
+- **Interactive Daily Time-Blocker & Timeline**:
+  - Visual hour-by-hour day timeline (8:00 AM to 9:00 PM) with capacity metrics and drag/slotting support.
+- **Morning Daily Planning Ritual & Intention Anchor**: Step-by-step workflow committing to 3–5 core tasks with a pinned North Star daily intention.
+- **Evening Shutdown Ritual**: Reflection sheet prompting review of accomplishments, guilt-free deferral of uncompleted items, and clean mental closure.
 
-### C. Authentication & Cloud Synchronization
+### C. Flow State Ambient Soundscape Synthesizer
+- **100% Offline Procedural Sound Engine**:
+  - Procedural Web Audio API sound generation requiring zero megabytes of downloads, zero external streaming, and zero latency.
+  - **Binaural 40Hz Gamma Focus**: Scientifically calibrated binaural beat (200Hz Left / 240Hz Right) for peak working memory and intense coding sessions.
+  - **Deep Brown Noise**: Low-frequency oceanic rumble engineered for ADHD focus and masking environmental office chatter.
+  - **Calm Pink Noise**: Balanced $1/f$ spectral balance for sustained cognitive endurance.
+  - **Rain on Glass**: Procedural raindrops with ambient resonance.
+  - **Pure White Noise**: High-frequency acoustic speech masking.
+- **Box Breathing Reset Guide (4-4-4-4)**:
+  - Guided vagus nerve reset widget: Inhale (4s) → Hold (4s) → Exhale (4s) → Rest (4s) with real-time expanding/contracting breathing ring.
+- **Reactive Waveform Audio Dock**:
+  - Compact top-bar and focus overlay dock featuring live oscillating soundwave visualizer bars.
+
+### D. GitHub-Style 365-Day Productivity Heatmap & Reflection
+- **Longitudinal Contribution Matrix**:
+  - GitHub-style 52-week activity intensity grid mapping daily task completion counts to 5 obsidian slate luminance tiers.
+  - Interactive day inspector tooltips displaying exact completion metrics and focus duration logged.
+- **Velocity & Streak Analytics**:
+  - Current Discipline Streak counter with consecutive-day momentum tracking.
+  - All-Time Best Streak record.
+  - Weekly Task Velocity and cognitive workload balance ratings.
+
+### E. Authentication & Cloud Synchronization
 - **Dual-Mode Authentication**:
   - **Offline Guest Mode**: 100% usable without registration or network access.
   - **Cloud Linked Mode**: Connect an email/password account authenticated via JWT Bearer tokens to sync with the FastAPI backend.
@@ -53,16 +87,25 @@ Local SQLite storage is the single source of truth. Every action succeeds in sub
 - **Exponential Backoff**: Dynamic retry delays (1s, 2s, 4s, 8s, 16s) to prevent network congestion.
 - **Conflict Resolution**: Last-Write-Wins (LWW) timestamp comparison with optimistic server versioning.
 
-### D. Navigation, Accessibility & Data Portability
-- **Universal Command Palette (`⌘K` / `Ctrl+K`)**: Rapid fuzzy search across tasks, categories, screens, themes, and sync operations.
+### F. Navigation, Workstation HUD & Data Sovereignty
+- **Omnipresent Workstation Header HUD**:
+  - Real-time digital clock and date with clean monospace typography.
+  - Daily completion progress ring (`8/12 done`).
+  - Ambient soundscape audio pill with 1-click toggling.
+  - Quick action shortcuts for Scratchpad (`⌘J`), Focus (`⌘F`), and Command Palette (`⌘K`).
+- **Universal Command Palette (`⌘K` / `Ctrl+K`)**: Rapid fuzzy search across tasks, categories, screens, themes, and audio controls.
+- **Global Scratchpad / Brain Dump (`⌘J` / `Ctrl+J`)**: Rapid ephemeral notepad with 1-click "Convert Lines to Tasks" parsing.
+- **Data Sovereignty & Portability Engine**:
+  - **Export to Markdown**: Generates clean daily logs formatted for Obsidian, Logseq, and Notion with markdown checkboxes and metadata.
+  - **Backup Full Workspace (JSON)**: Complete portable export of tasks, categories, and settings.
+  - **Batch Import from Markdown Checklist**: Paste any raw markdown checklist (e.g. `- [ ] Task #Work !urgent ~30m`); IDEM uses `SmartTaskParser` to generate real tasks with structured tags automatically.
 - **Responsive Layout**:
-  - **Desktop / Web**: 230px persistent sidebar with numeric shortcuts (`⌘1`–`⌘6`), multi-column workspace, and mouse/keyboard ergonomics.
+  - **Desktop / Web**: 230px persistent sidebar with numeric shortcuts (`⌘1`–`⌘7`, `⌘B`), multi-column workspace, and mouse/keyboard ergonomics.
   - **Mobile**: Thumb-friendly bottom navigation bar with responsive layout adjustments.
 - **Obsidian Slate Visual Design**:
   - Dark Mode (`#0F1115` base, `#171A21` surface, `#2B313C` border, `#F5F5F5` typography).
   - Warm Paper Light Mode (cream paper tones avoiding clinical pure-white glare).
   - 7 Curated Accent Packs: Forest, Ocean, Amber, Burgundy, Lavender, Slate, Monochrome.
-- **Data Portability & Zero Lock-in**: One-tap export to structured Markdown (`# Task Export`) and raw JSON.
 
 ---
 

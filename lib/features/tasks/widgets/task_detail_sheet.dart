@@ -9,6 +9,7 @@ import '../models/task_model.dart';
 import '../models/task_priority.dart';
 import '../models/recurring_rule.dart';
 import '../providers/task_providers.dart';
+import '../services/task_decomposer_service.dart';
 import '../../categories/models/category_model.dart';
 import '../../categories/providers/category_providers.dart';
 import '../../../database/database_provider.dart';
@@ -250,11 +251,45 @@ class _TaskDetailSheetState extends ConsumerState<TaskDetailSheet> {
                   'SUBTASKS & ACTION STEPS',
                   style: AppTypography.labelSmall(context.mutedText).copyWith(letterSpacing: 1.2),
                 ),
-                if (subtasks.isNotEmpty)
-                  Text(
-                    '${subtasks.where((s) => s.isCompleted).length} / ${subtasks.length} done',
-                    style: AppTypography.code(context.accent, fontSize: 11),
-                  ),
+                Row(
+                  children: [
+                    if (subtasks.isEmpty)
+                      InkWell(
+                        onTap: () async {
+                          final steps = TaskDecomposerService.decompose(
+                            _titleController.text,
+                            description: _descController.text,
+                          );
+                          final repo = ref.read(taskRepositoryProvider);
+                          for (final step in steps) {
+                            await repo.createTask(title: step, parentTaskId: widget.taskId);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: context.accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: context.accent.withValues(alpha: 0.3), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.sparkles, size: 10, color: context.accent),
+                              const SizedBox(width: 4),
+                              Text('Auto-Plan', style: AppTypography.code(context.accent, fontSize: 10).copyWith(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        '${subtasks.where((s) => s.isCompleted).length} / ${subtasks.length} done',
+                        style: AppTypography.code(context.accent, fontSize: 11),
+                      ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 8),

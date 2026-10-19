@@ -6,6 +6,7 @@ import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../tasks/providers/task_providers.dart';
 import '../../../database/database_provider.dart';
+import '../widgets/ambient_audio_dock.dart';
 
 enum FocusTimerMode {
   pomodoro(25 * 60, '25m Focus'),
@@ -210,9 +211,15 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
                       ],
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(LucideIcons.x, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Row(
+                    children: [
+                      const AmbientAudioDock(compact: true),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(LucideIcons.x, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ],
               ),
