@@ -289,12 +289,12 @@ class _CommandPaletteState extends ConsumerState<CommandPalette> {
                       },
                     ),
                     _CommandItem(
-                      icon: LucideIcons.layoutGrid,
-                      title: 'Go to Priority Matrix (Eisenhower)',
+                      icon: LucideIcons.columns,
+                      title: 'Go to Kanban Board',
                       shortcut: '⌘4',
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.go('/matrix');
+                        context.go('/board');
                       },
                     ),
                     _CommandItem(

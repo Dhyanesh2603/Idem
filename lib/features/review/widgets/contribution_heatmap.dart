@@ -103,12 +103,14 @@ class ContributionHeatmap extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with Streaks
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          // Header with Streaks (Responsive for mobile to prevent overflow)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 460;
+
+              final titleSection = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
@@ -129,25 +131,65 @@ class ContributionHeatmap extends StatelessWidget {
                     style: AppTypography.titleMedium(context.primaryText).copyWith(fontWeight: FontWeight.w700),
                   ),
                 ],
-              ),
-              Row(
+              );
+
+              final streakBadges = Row(
+                mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
                 children: [
-                  _StreakBadge(
-                    label: 'Current Streak',
-                    value: '$currentStreak days',
-                    icon: LucideIcons.zap,
-                    color: context.accent,
-                  ),
+                  isNarrow
+                      ? Expanded(
+                          child: _StreakBadge(
+                            label: 'Current Streak',
+                            value: '$currentStreak days',
+                            icon: LucideIcons.zap,
+                            color: context.accent,
+                          ),
+                        )
+                      : _StreakBadge(
+                          label: 'Current Streak',
+                          value: '$currentStreak days',
+                          icon: LucideIcons.zap,
+                          color: context.accent,
+                        ),
                   const SizedBox(width: 10),
-                  _StreakBadge(
-                    label: 'Best Streak',
-                    value: '$longestStreak days',
-                    icon: LucideIcons.trophy,
-                    color: Colors.amber.shade400,
-                  ),
+                  isNarrow
+                      ? Expanded(
+                          child: _StreakBadge(
+                            label: 'Best Streak',
+                            value: '$longestStreak days',
+                            icon: LucideIcons.trophy,
+                            color: Colors.amber.shade400,
+                          ),
+                        )
+                      : _StreakBadge(
+                          label: 'Best Streak',
+                          value: '$longestStreak days',
+                          icon: LucideIcons.trophy,
+                          color: Colors.amber.shade400,
+                        ),
                 ],
-              ),
-            ],
+              );
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleSection,
+                    const SizedBox(height: 12),
+                    streakBadges,
+                  ],
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: titleSection),
+                  streakBadges,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 20),
 

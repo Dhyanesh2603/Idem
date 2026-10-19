@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/theme/app_typography.dart';
@@ -598,16 +599,47 @@ class _KanbanColumn extends StatelessWidget {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: tasks.length,
                         itemBuilder: (context, i) {
                           final task = tasks[i];
-                          return _KanbanCard(
-                            task: task,
-                            currentStage: stage,
-                            onMove: (target) => onMoveTask(task, target),
-                            onTap: () => onTapTask(task),
+                          // Each card in the column is also a DragTarget so cards can be dropped between cards
+                          return DragTarget<TaskModel>(
+                            onWillAcceptWithDetails: (details) => details.data.id != task.id,
+                            onAcceptWithDetails: (details) {
+                              HapticFeedback.mediumImpact();
+                              onMoveTask(details.data, stage);
+                            },
+                            builder: (context, candidateData, rejectedData) {
+                              final isCardHovered = candidateData.isNotEmpty;
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isCardHovered)
+                                    Container(
+                                      height: 4,
+                                      margin: const EdgeInsets.symmetric(vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: context.accent,
+                                        borderRadius: BorderRadius.circular(2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: context.accent.withValues(alpha: 0.6),
+                                            blurRadius: 6,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  _KanbanCard(
+                                    task: task,
+                                    currentStage: stage,
+                                    onMove: (target) => onMoveTask(task, target),
+                                    onTap: () => onTapTask(task),
+                                  ),
+                                ],
+                              );
+                            },
                           );
                         },
                       ),
@@ -615,25 +647,25 @@ class _KanbanColumn extends StatelessWidget {
 
               // Quick Add Card Button
               Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: InkWell(
                   onTap: onAddTask,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: context.secondarySurface,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: context.border, width: 0.8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(LucideIcons.plus, size: 13, color: context.mutedText),
-                        const SizedBox(width: 6),
+                        Icon(LucideIcons.plus, size: 14, color: context.mutedText),
+                        const SizedBox(width: 8),
                         Text(
                           'Add Card',
-                          style: AppTypography.labelSmall(context.mutedText),
+                          style: AppTypography.labelMedium(context.mutedText),
                         ),
                       ],
                     ),
@@ -648,7 +680,7 @@ class _KanbanColumn extends StatelessWidget {
   }
 }
 
-class _KanbanCard extends StatelessWidget {
+class _KanbanCard extends ConsumerWidget {
   final TaskModel task;
   final KanbanStage currentStage;
   final ValueChanged<KanbanStage> onMove;
@@ -662,7 +694,7 @@ class _KanbanCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Color priorityColor;
     String priorityLabel;
     switch (task.priority) {
@@ -676,7 +708,7 @@ class _KanbanCard extends StatelessWidget {
         break;
       case TaskPriority.medium:
         priorityColor = const Color(0xFF3B82F6);
-        priorityLabel = 'P3 Med';
+        priorityLabel = 'P3 Medium';
         break;
       case TaskPriority.low:
         priorityColor = context.mutedText;
@@ -688,66 +720,128 @@ class _KanbanCard extends StatelessWidget {
         break;
     }
 
+    final subtasksAsync = ref.watch(taskSubtasksStreamProvider(task.id));
+    final subtasks = subtasksAsync.asData?.value ?? [];
+    final completedSubtasks = subtasks.where((s) => s.isCompleted).length;
+
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final category = task.categoryId != null
+        ? categoriesAsync.asData?.value.where((c) => c.id == task.categoryId).firstOrNull
+        : null;
+
     final currentIndex = KanbanStage.values.indexOf(currentStage);
 
-    // Standard card presentation widget
+    // Large, detailed Kanban card presentation
     final cardContent = Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.secondarySurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: task.isFocus ? context.accent : context.border,
-          width: task.isFocus ? 1.2 : 0.8,
+          width: task.isFocus ? 1.5 : 0.8,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Top Tags with Drag Handle hint
                 Row(
                   children: [
+                    // Priority Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: priorityColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: priorityColor.withValues(alpha: 0.4), width: 0.6),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: priorityColor.withValues(alpha: 0.4), width: 0.8),
                       ),
-                      child: Text(
-                        priorityLabel,
-                        style: AppTypography.code(priorityColor, fontSize: 9).copyWith(fontWeight: FontWeight.w600),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.flag, size: 10, color: priorityColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            priorityLabel,
+                            style: AppTypography.code(priorityColor, fontSize: 10).copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
                     ),
-                    if (task.estimatedMinutes > 0) ...[
+
+                    // Category Pill (if assigned)
+                    if (category != null) ...[
                       const SizedBox(width: 6),
-                      Text(
-                        '~${task.estimatedMinutes}m',
-                        style: AppTypography.code(context.mutedText, fontSize: 9),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))).withValues(alpha: 0.4),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          category.name,
+                          style: AppTypography.code(
+                            Color(int.parse(category.colorHex.replaceFirst('#', '0xFF'))),
+                            fontSize: 10,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
+
                     const Spacer(),
+
+                    // Focus Tag
                     if (task.isFocus) ...[
-                      Icon(LucideIcons.target, size: 13, color: context.accent),
-                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: context.accent.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: context.accent, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(LucideIcons.target, size: 10, color: context.accent),
+                            const SizedBox(width: 3),
+                            Text('Focus', style: AppTypography.code(context.accent, fontSize: 9).copyWith(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                     ],
-                    Icon(LucideIcons.gripVertical, size: 13, color: context.mutedText.withValues(alpha: 0.5)),
+
+                    // Tactile Grip Handle Icon
+                    Icon(LucideIcons.gripVertical, size: 16, color: context.mutedText.withValues(alpha: 0.6)),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Card Title
                 Text(
                   task.title,
-                  style: AppTypography.bodyMedium(context.primaryText).copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: AppTypography.titleMedium(context.primaryText).copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    height: 1.3,
                     decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                     decorationColor: context.mutedText,
                   ),
@@ -755,17 +849,101 @@ class _KanbanCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
 
+                // Card Description
                 if (task.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     task.description,
-                    style: AppTypography.bodySmall(context.secondaryText),
-                    maxLines: 2,
+                    style: AppTypography.bodySmall(context.secondaryText).copyWith(fontSize: 12.5),
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
 
-                const SizedBox(height: 10),
+                // Subtasks Progress Section (if task has subtasks)
+                if (subtasks.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.border, width: 0.6),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.checkSquare,
+                                  size: 12,
+                                  color: completedSubtasks == subtasks.length ? context.accent : context.mutedText,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '$completedSubtasks of ${subtasks.length} subtasks',
+                                  style: AppTypography.code(context.secondaryText, fontSize: 10).copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${((completedSubtasks / subtasks.length) * 100).toInt()}%',
+                              style: AppTypography.code(context.accent, fontSize: 10).copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: completedSubtasks / subtasks.length,
+                            minHeight: 4,
+                            backgroundColor: context.secondarySurface,
+                            valueColor: AlwaysStoppedAnimation<Color>(context.accent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Metadata Footer: Deadline & Time Estimates
+                if (task.deadline != null || task.estimatedMinutes > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (task.deadline != null) ...[
+                        Icon(LucideIcons.calendar, size: 11, color: context.mutedText),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('MMM d, h:mm a').format(task.deadline!),
+                          style: AppTypography.code(context.mutedText, fontSize: 10),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      if (task.estimatedMinutes > 0) ...[
+                        Icon(LucideIcons.clock, size: 11, color: context.mutedText),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${task.estimatedMinutes}m',
+                          style: AppTypography.code(context.mutedText, fontSize: 10),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
 
                 // Bottom Movement Controls
                 Row(
@@ -773,23 +951,32 @@ class _KanbanCard extends StatelessWidget {
                   children: [
                     // Move Left Button
                     if (currentIndex > 0)
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                        icon: const Icon(LucideIcons.arrowLeft, size: 14),
-                        color: context.mutedText,
-                        tooltip: 'Move to ${KanbanStage.values[currentIndex - 1].label}',
-                        onPressed: () => onMove(KanbanStage.values[currentIndex - 1]),
+                      InkWell(
+                        onTap: () => onMove(KanbanStage.values[currentIndex - 1]),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(LucideIcons.arrowLeft, size: 13),
+                              const SizedBox(width: 4),
+                              Text(
+                                KanbanStage.values[currentIndex - 1].label,
+                                style: AppTypography.code(context.mutedText, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
                       )
                     else
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 40),
 
                     // Quick Stage Switch Dropdown Menu
                     PopupMenuButton<KanbanStage>(
-                      icon: Icon(LucideIcons.moreHorizontal, size: 14, color: context.mutedText),
+                      icon: Icon(LucideIcons.moreHorizontal, size: 16, color: context.mutedText),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       color: context.surface,
                       onSelected: onMove,
                       itemBuilder: (ctx) => KanbanStage.values
@@ -811,17 +998,28 @@ class _KanbanCard extends StatelessWidget {
 
                     // Move Right Button
                     if (currentIndex < KanbanStage.values.length - 1)
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                        icon: const Icon(LucideIcons.arrowRight, size: 14),
-                        color: context.accent,
-                        tooltip: 'Move to ${KanbanStage.values[currentIndex + 1].label}',
-                        onPressed: () => onMove(KanbanStage.values[currentIndex + 1]),
+                      InkWell(
+                        onTap: () => onMove(KanbanStage.values[currentIndex + 1]),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                KanbanStage.values[currentIndex + 1].label,
+                                style: AppTypography.code(context.accent, fontSize: 10).copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(LucideIcons.arrowRight, size: 13, color: context.accent),
+                            ],
+                          ),
+                        ),
                       )
                     else
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 40),
                   ],
                 ),
               ],
@@ -841,20 +1039,20 @@ class _KanbanCard extends StatelessWidget {
         child: Transform.rotate(
           angle: 0.04,
           child: Container(
-            width: 260,
+            width: 300,
             decoration: BoxDecoration(
               color: context.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: context.accent, width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.accent, width: 1.8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,37 +1060,48 @@ class _KanbanCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
                         color: priorityColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         priorityLabel,
-                        style: AppTypography.code(priorityColor, fontSize: 9).copyWith(fontWeight: FontWeight.w600),
+                        style: AppTypography.code(priorityColor, fontSize: 10).copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     const Spacer(),
-                    Icon(LucideIcons.move, size: 13, color: context.accent),
+                    Icon(LucideIcons.move, size: 15, color: context.accent),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   task.title,
-                  style: AppTypography.bodyMedium(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                  style: AppTypography.titleMedium(context.primaryText).copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (subtasks.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '$completedSubtasks/${subtasks.length} subtasks',
+                    style: AppTypography.code(context.mutedText, fontSize: 10),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
       childWhenDragging: Opacity(
-        opacity: 0.3,
+        opacity: 0.25,
         child: cardContent,
       ),
       child: cardContent,
     );
   }
 }
+

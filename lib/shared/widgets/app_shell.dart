@@ -51,6 +51,7 @@ class AppShell extends ConsumerWidget {
                 _onNavigate(2, context);
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.digit4:
+              case LogicalKeyboardKey.keyB:
                 _onNavigate(3, context);
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.digit5:
@@ -58,10 +59,6 @@ class AppShell extends ConsumerWidget {
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.digit6:
                 _onNavigate(5, context);
-                return KeyEventResult.handled;
-              case LogicalKeyboardKey.digit7:
-              case LogicalKeyboardKey.keyB:
-                _onNavigate(6, context);
                 return KeyEventResult.handled;
               case LogicalKeyboardKey.keyF:
                 context.push('/focus');
@@ -119,9 +116,9 @@ class AppShell extends ConsumerWidget {
                     label: 'Calendar',
                   ),
                   NavigationDestination(
-                    icon: Icon(LucideIcons.layoutGrid),
-                    selectedIcon: Icon(LucideIcons.layoutGrid),
-                    label: 'Matrix',
+                    icon: Icon(LucideIcons.columns),
+                    selectedIcon: Icon(LucideIcons.columns),
+                    label: 'Board',
                   ),
                   NavigationDestination(
                     icon: Icon(LucideIcons.checkCheck),
@@ -282,18 +279,11 @@ class _DesktopSidebar extends ConsumerWidget {
                   onTap: () => onNavigate(2),
                 ),
                 _SidebarItem(
-                  icon: LucideIcons.layoutGrid,
-                  label: 'Matrix',
+                  icon: LucideIcons.columns,
+                  label: 'Board',
                   shortcut: '4',
                   isSelected: currentIndex == 3,
                   onTap: () => onNavigate(3),
-                ),
-                _SidebarItem(
-                  icon: LucideIcons.columns,
-                  label: 'Board',
-                  shortcut: 'B',
-                  isSelected: currentIndex == 6,
-                  onTap: () => onNavigate(6),
                 ),
                 _SidebarItem(
                   icon: LucideIcons.checkCheck,

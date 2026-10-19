@@ -8,7 +8,6 @@ import '../../features/calendar/screens/calendar_screen.dart';
 import '../../features/review/screens/review_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/focus/screens/focus_screen.dart';
-import '../../features/matrix/screens/matrix_screen.dart';
 import '../../features/board/screens/board_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -52,12 +51,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Branch 3: Priority Matrix (Eisenhower)
+          // Branch 3: Visual Kanban Board (Dedicated Workstation)
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/board',
+                builder: (context, state) => const BoardScreen(),
+              ),
+              GoRoute(
                 path: '/matrix',
-                builder: (context, state) => const MatrixScreen(),
+                redirect: (context, state) => '/board',
               ),
             ],
           ),
@@ -76,15 +79,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/settings',
                 builder: (context, state) => const SettingsScreen(),
-              ),
-            ],
-          ),
-          // Branch 6: Linear Kanban Board
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/board',
-                builder: (context, state) => const BoardScreen(),
               ),
             ],
           ),
