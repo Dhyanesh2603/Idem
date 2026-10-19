@@ -64,101 +64,209 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           children: [
             // Typographical Calm Header with SyncStatusBadge & Actions
             Padding(
-              padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          dateStr.toUpperCase(),
-                          style: AppTypography.labelMedium(context.mutedText).copyWith(
-                            letterSpacing: 1.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Today',
-                          style: AppTypography.displayLarge(context.primaryText),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 8),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 600;
+
+                  final headerTitle = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Connectivity & Sync Status Badge
-                      const SyncStatusBadge(compact: true),
-                      const SizedBox(width: 8),
-
-                      // Search Toggle
-                      IconButton(
-                        tooltip: 'Search tasks',
-                        icon: Icon(
-                          _showSearch ? LucideIcons.x : LucideIcons.search,
-                          size: 18,
-                          color: _showSearch ? context.accent : context.mutedText,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _showSearch = !_showSearch;
-                            if (!_showSearch) {
-                              _searchQuery = '';
-                              _searchController.clear();
-                            }
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 4),
-
-                      // Command Palette (⌘K) Trigger
-                      IconButton(
-                        tooltip: 'Command Palette (⌘K)',
-                        icon: Icon(LucideIcons.command, size: 17, color: context.mutedText),
-                        onPressed: () => CommandPalette.show(context),
-                      ),
-                      const SizedBox(width: 2),
-
-                      // Evening Shutdown Ritual Button
-                      IconButton(
-                        tooltip: 'Daily Shutdown Ritual',
-                        icon: Icon(LucideIcons.sunset, size: 17, color: context.mutedText),
-                        onPressed: () => ShutdownSheet.show(context),
-                      ),
-                      const SizedBox(width: 4),
-
-                      // Daily Planning Session Button
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const DailyPlanningSheet(),
-                          );
-                        },
-                        icon: Icon(LucideIcons.sparkles, size: 14, color: context.accent),
-                        label: Text(
-                          'Plan Day',
-                          style: AppTypography.labelMedium(context.primaryText),
+                      Text(
+                        dateStr.toUpperCase(),
+                        style: AppTypography.labelMedium(context.mutedText).copyWith(
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
                         ),
                       ),
-                      const SizedBox(width: 4),
-
-                      // Algorithmic Auto-Scheduler
-                      IconButton(
-                        tooltip: 'Algorithmic Day Orchestrator',
-                        icon: Icon(LucideIcons.wand2, size: 16, color: context.accent),
-                        onPressed: () {
-                          final tasks = todayTasksAsync.asData?.value ?? [];
-                          AutoScheduleDialog.show(context, tasks);
-                        },
+                      const SizedBox(height: 2),
+                      Text(
+                        'Today',
+                        style: AppTypography.displayLarge(context.primaryText).copyWith(
+                          fontSize: isNarrow ? 28 : 34,
+                        ),
                       ),
                     ],
-                  ),
-                ],
+                  );
+
+                  if (isNarrow) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: headerTitle),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SyncStatusBadge(compact: true),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              tooltip: 'Search tasks',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              icon: Icon(
+                                _showSearch ? LucideIcons.x : LucideIcons.search,
+                                size: 18,
+                                color: _showSearch ? context.accent : context.mutedText,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _showSearch = !_showSearch;
+                                  if (!_showSearch) {
+                                    _searchQuery = '';
+                                    _searchController.clear();
+                                  }
+                                });
+                              },
+                            ),
+                            IconButton(
+                              tooltip: 'Plan Day',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              icon: Icon(LucideIcons.sparkles, size: 18, color: context.accent),
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => const DailyPlanningSheet(),
+                                );
+                              },
+                            ),
+                            PopupMenuButton<String>(
+                              tooltip: 'More actions',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                              icon: Icon(LucideIcons.moreVertical, size: 18, color: context.mutedText),
+                              color: context.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(color: context.border, width: 0.8),
+                              ),
+                              onSelected: (val) {
+                                switch (val) {
+                                  case 'command':
+                                    CommandPalette.show(context);
+                                    break;
+                                  case 'autoschedule':
+                                    final tasks = todayTasksAsync.asData?.value ?? [];
+                                    AutoScheduleDialog.show(context, tasks);
+                                    break;
+                                  case 'shutdown':
+                                    ShutdownSheet.show(context);
+                                    break;
+                                }
+                              },
+                              itemBuilder: (_) => [
+                                PopupMenuItem(
+                                  value: 'command',
+                                  child: Row(
+                                    children: [
+                                      Icon(LucideIcons.command, size: 15, color: context.primaryText),
+                                      const SizedBox(width: 10),
+                                      Text('Command Palette (⌘K)', style: AppTypography.bodySmall(context.primaryText)),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'autoschedule',
+                                  child: Row(
+                                    children: [
+                                      Icon(LucideIcons.wand2, size: 15, color: context.accent),
+                                      const SizedBox(width: 10),
+                                      Text('Auto-Schedule Day', style: AppTypography.bodySmall(context.primaryText)),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'shutdown',
+                                  child: Row(
+                                    children: [
+                                      Icon(LucideIcons.sunset, size: 15, color: context.primaryText),
+                                      const SizedBox(width: 10),
+                                      Text('Evening Shutdown', style: AppTypography.bodySmall(context.primaryText)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: headerTitle),
+                      Row(
+                        children: [
+                          const SyncStatusBadge(compact: true),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Search tasks',
+                            icon: Icon(
+                              _showSearch ? LucideIcons.x : LucideIcons.search,
+                              size: 18,
+                              color: _showSearch ? context.accent : context.mutedText,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _showSearch = !_showSearch;
+                                if (!_showSearch) {
+                                  _searchQuery = '';
+                                  _searchController.clear();
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            tooltip: 'Command Palette (⌘K)',
+                            icon: Icon(LucideIcons.command, size: 17, color: context.mutedText),
+                            onPressed: () => CommandPalette.show(context),
+                          ),
+                          const SizedBox(width: 2),
+                          IconButton(
+                            tooltip: 'Daily Shutdown Ritual',
+                            icon: Icon(LucideIcons.sunset, size: 17, color: context.mutedText),
+                            onPressed: () => ShutdownSheet.show(context),
+                          ),
+                          const SizedBox(width: 4),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => const DailyPlanningSheet(),
+                              );
+                            },
+                            icon: Icon(LucideIcons.sparkles, size: 14, color: context.accent),
+                            label: Text(
+                              'Plan Day',
+                              style: AppTypography.labelMedium(context.primaryText),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            tooltip: 'Algorithmic Day Orchestrator',
+                            icon: Icon(LucideIcons.wand2, size: 16, color: context.accent),
+                            onPressed: () {
+                              final tasks = todayTasksAsync.asData?.value ?? [];
+                              AutoScheduleDialog.show(context, tasks);
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -258,17 +366,22 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '$completed of $total tasks completed • ${(progress * 100).toInt()}%',
-                              style: AppTypography.labelSmall(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                            Expanded(
+                              child: Text(
+                                '$completed of $total tasks completed • ${(progress * 100).toInt()}%',
+                                style: AppTypography.labelSmall(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (focusCount > 0) ...[
                                   Icon(LucideIcons.target, size: 12, color: context.accent),
                                   const SizedBox(width: 4),
                                   Text('$focusCount focus', style: AppTypography.code(context.accent, fontSize: 10)),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                 ],
                                 Icon(LucideIcons.listTodo, size: 12, color: context.mutedText),
                                 const SizedBox(width: 4),

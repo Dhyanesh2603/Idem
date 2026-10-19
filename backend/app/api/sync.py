@@ -10,11 +10,19 @@ from backend.app.schemas.sync import PushOperation, PushResponse, PullResponse
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
+def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
 def parse_iso(dt_str: Optional[str]) -> Optional[datetime]:
     if not dt_str:
         return None
     try:
-        return datetime.fromisoformat(dt_str)
+        dt = datetime.fromisoformat(dt_str)
+        return ensure_utc(dt)
     except Exception:
         return None
 
@@ -88,7 +96,8 @@ def push_operation(
                 db.add(task)
             else:
                 # Check Last-Write-Wins: if server was updated after client timestamp and not force update
-                if op.operation_type != "FORCE_UPDATE" and task.updated_at and client_dt < task.updated_at.replace(tzinfo=timezone.utc if task.updated_at.tzinfo is None else None):
+                server_updated = ensure_utc(task.updated_at)
+                if op.operation_type != "FORCE_UPDATE" and server_updated and client_dt < server_updated:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail=task.to_dict(),

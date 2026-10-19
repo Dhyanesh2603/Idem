@@ -23,9 +23,9 @@ void main() {
     // Initial settle
     await tester.pumpAndSettle();
 
-    // Verify Today screen title renders
+    // Verify Today screen title and action render
     expect(find.text('Today'), findsWidgets);
-    expect(find.text('Plan Day'), findsOneWidget);
+    expect(find.byTooltip('Plan Day'), findsOneWidget);
 
     await db.close();
   });
