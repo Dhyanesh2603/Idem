@@ -8,7 +8,7 @@ import 'package:obsidian_slate/database/connection/in_memory_connection.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('SlateApp smoke test and navigation rendering', (WidgetTester tester) async {
+  testWidgets('IdemApp smoke test and navigation rendering', (WidgetTester tester) async {
     final db = AppDatabase.forTesting(constructInMemoryDatabase());
 
     await tester.pumpWidget(
@@ -16,7 +16,7 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
         ],
-        child: const SlateApp(),
+        child: const IdemApp(),
       ),
     );
 

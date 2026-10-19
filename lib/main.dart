@@ -10,19 +10,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     const ProviderScope(
-      child: SlateApp(),
+      child: IdemApp(),
     ),
   );
 }
 
-class SlateApp extends ConsumerStatefulWidget {
-  const SlateApp({super.key});
+class IdemApp extends ConsumerStatefulWidget {
+  const IdemApp({super.key});
 
   @override
-  ConsumerState<SlateApp> createState() => _SlateAppState();
+  ConsumerState<IdemApp> createState() => _IdemAppState();
 }
 
-class _SlateAppState extends ConsumerState<SlateApp> {
+class _IdemAppState extends ConsumerState<IdemApp> {
   @override
   void initState() {
     super.initState();
@@ -99,7 +99,7 @@ class _SlateAppState extends ConsumerState<SlateApp> {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'Slate',
+      title: 'Idem',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(themeState.accentPack),
       darkTheme: AppTheme.dark(themeState.accentPack),

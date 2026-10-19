@@ -1,11 +1,11 @@
 {
-    "name": "obsidian_slate",
-    "short_name": "obsidian_slate",
+    "name": "Idem Workstation",
+    "short_name": "Idem",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F1115",
+    "theme_color": "#0F1115",
+    "description": "Deterministic offline-first task management and deep work workstation.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

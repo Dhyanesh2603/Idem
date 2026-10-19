@@ -141,29 +141,53 @@ class _DesktopSidebar extends ConsumerWidget {
             child: Row(
               children: [
                 Container(
-                  width: 24,
-                  height: 24,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: context.accent,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(7),
+                    boxShadow: [
+                      BoxShadow(
+                        color: context.accent.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Center(
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
+                    child: Icon(
+                      LucideIcons.layers,
+                      size: 15,
+                      color: ThemeData.estimateBrightnessForColor(context.accent) == Brightness.dark
+                          ? Colors.white
+                          : const Color(0xFF0F1115),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'SLATE',
-                  style: AppTypography.titleMedium(context.primaryText).copyWith(
-                    letterSpacing: 2.0,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'IDEM',
+                        style: AppTypography.titleMedium(context.primaryText).copyWith(
+                          letterSpacing: 2.5,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Text(
+                        'OFFLINE-FIRST',
+                        style: AppTypography.code(context.mutedText, fontSize: 8).copyWith(
+                          letterSpacing: 1.0,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
