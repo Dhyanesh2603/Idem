@@ -501,7 +501,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               child: todayTasksAsync.when(
                 data: (tasks) {
                   if (_viewMode == TodayViewMode.board) {
-                    return const BoardScreen();
+                    return const BoardScreen(isEmbedded: true);
                   }
                   if (_viewMode == TodayViewMode.timeline) {
                     return SingleChildScrollView(

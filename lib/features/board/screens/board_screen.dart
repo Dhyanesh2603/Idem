@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -24,7 +25,8 @@ enum KanbanStage {
 }
 
 class BoardScreen extends ConsumerStatefulWidget {
-  const BoardScreen({super.key});
+  final bool isEmbedded;
+  const BoardScreen({super.key, this.isEmbedded = false});
 
   @override
   ConsumerState<BoardScreen> createState() => _BoardScreenState();
@@ -33,6 +35,21 @@ class BoardScreen extends ConsumerStatefulWidget {
 class _BoardScreenState extends ConsumerState<BoardScreen> {
   String? _selectedCategoryId;
   String _searchQuery = '';
+  bool _showSearch = false;
+  late final PageController _pageController;
+  int _mobileActiveStageIndex = 1; // Default to 'To Do'
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _mobileActiveStageIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   KanbanStage _getStageForTask(TaskModel task) {
     if (task.isCompleted) return KanbanStage.done;
@@ -152,65 +169,89 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
       return true;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: context.background,
-      body: SafeArea(
-        child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 650;
+
+        final bodyContent = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'WORKSTATION VISUALIZER',
-                          style: AppTypography.labelMedium(context.mutedText).copyWith(
-                            letterSpacing: 1.5,
-                            fontWeight: FontWeight.w600,
+            // Header (only if not embedded inside TodayScreen)
+            if (!widget.isEmbedded)
+              Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'WORKSTATION VISUALIZER',
+                            style: AppTypography.labelMedium(context.mutedText).copyWith(
+                              letterSpacing: 1.5,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Kanban Board',
-                          style: AppTypography.displayLarge(context.primaryText),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Search Box
-                  Container(
-                    width: 200,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: context.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: context.border, width: 0.8),
-                    ),
-                    child: TextField(
-                      style: AppTypography.bodySmall(context.primaryText),
-                      decoration: InputDecoration(
-                        hintText: 'Filter cards...',
-                        hintStyle: AppTypography.bodySmall(context.mutedText),
-                        prefixIcon: Icon(LucideIcons.search, size: 14, color: context.mutedText),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Kanban Board',
+                            style: AppTypography.displayLarge(context.primaryText).copyWith(
+                              fontSize: isMobile ? 26 : 32,
+                            ),
+                          ),
+                        ],
                       ),
-                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
                     ),
-                  ),
-                ],
+                    IconButton(
+                      tooltip: 'Filter cards',
+                      icon: Icon(
+                        _showSearch ? LucideIcons.x : LucideIcons.search,
+                        size: 18,
+                        color: _showSearch ? context.accent : context.mutedText,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showSearch = !_showSearch;
+                          if (!_showSearch) _searchQuery = '';
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
+
+            // Optional Search Bar
+            if (_showSearch)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: context.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: context.border, width: 0.8),
+                  ),
+                  child: TextField(
+                    autofocus: true,
+                    style: AppTypography.bodySmall(context.primaryText),
+                    decoration: InputDecoration(
+                      hintText: 'Filter cards by title or notes...',
+                      hintStyle: AppTypography.bodySmall(context.mutedText),
+                      prefixIcon: Icon(LucideIcons.search, size: 14, color: context.mutedText),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  ),
+                ),
+              ),
 
             // Category Filter Bar
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Row(
                 children: [
                   _filterChip('All', _selectedCategoryId == null, () {
@@ -225,35 +266,181 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
-            // 4-Column Board
-            Expanded(
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                children: KanbanStage.values.map((stage) {
-                  final stageTasks = filteredTasks.where((t) => _getStageForTask(t) == stage).toList();
-                  return _KanbanColumn(
-                    stage: stage,
-                    tasks: stageTasks,
-                    onMoveTask: _moveTaskStage,
-                    onAddTask: () => _quickAddTask(stage),
-                    onTapTask: (task) {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => TaskDetailSheet(taskId: task.id),
+            // Mobile-Optimized Stage Switcher & Drop Targets Bar
+            if (isMobile)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: context.secondarySurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.border, width: 0.8),
+                  ),
+                  child: Row(
+                    children: KanbanStage.values.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final stage = entry.value;
+                      final isSelected = _mobileActiveStageIndex == idx;
+                      final count = filteredTasks.where((t) => _getStageForTask(t) == stage).length;
+
+                      // Each stage tab is ALSO a DragTarget so cards can be dropped directly onto other stage tabs!
+                      return Expanded(
+                        child: DragTarget<TaskModel>(
+                          onWillAcceptWithDetails: (details) => true,
+                          onAcceptWithDetails: (details) {
+                            HapticFeedback.mediumImpact();
+                            _moveTaskStage(details.data, stage);
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            final isDragHovered = candidateData.isNotEmpty;
+                            return InkWell(
+                              onTap: () {
+                                _pageController.animateToPage(
+                                  idx,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isDragHovered
+                                      ? context.accent.withValues(alpha: 0.25)
+                                      : isSelected
+                                          ? context.surface
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: isDragHovered
+                                      ? Border.all(color: context.accent, width: 1.2)
+                                      : isSelected
+                                          ? Border.all(color: context.border, width: 0.8)
+                                          : null,
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.15),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          stage.icon,
+                                          size: 12,
+                                          color: isSelected ? context.accent : context.mutedText,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          stage.label,
+                                          style: AppTypography.code(
+                                            isSelected ? context.primaryText : context.mutedText,
+                                            fontSize: 10,
+                                          ).copyWith(
+                                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '$count',
+                                      style: AppTypography.code(
+                                        isSelected ? context.accent : context.mutedText,
+                                        fontSize: 9,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       );
-                    },
-                  );
-                }).toList(),
+                    }).toList(),
+                  ),
+                ),
               ),
+
+            // Kanban Body: Snapping PageView on Mobile vs Horizontal ListView on Desktop
+            Expanded(
+              child: isMobile
+                  ? PageView.builder(
+                      controller: _pageController,
+                      physics: const PageScrollPhysics(),
+                      onPageChanged: (idx) {
+                        setState(() => _mobileActiveStageIndex = idx);
+                      },
+                      itemCount: KanbanStage.values.length,
+                      itemBuilder: (context, idx) {
+                        final stage = KanbanStage.values[idx];
+                        final stageTasks = filteredTasks.where((t) => _getStageForTask(t) == stage).toList();
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: _KanbanColumn(
+                            stage: stage,
+                            tasks: stageTasks,
+                            isMobile: true,
+                            onMoveTask: _moveTaskStage,
+                            onAddTask: () => _quickAddTask(stage),
+                            onTapTask: (task) {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => TaskDetailSheet(taskId: task.id),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    )
+                  : ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      children: KanbanStage.values.map((stage) {
+                        final stageTasks = filteredTasks.where((t) => _getStageForTask(t) == stage).toList();
+                        return _KanbanColumn(
+                          stage: stage,
+                          tasks: stageTasks,
+                          isMobile: false,
+                          onMoveTask: _moveTaskStage,
+                          onAddTask: () => _quickAddTask(stage),
+                          onTapTask: (task) {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => TaskDetailSheet(taskId: task.id),
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
             ),
           ],
-        ),
-      ),
+        );
+
+        if (widget.isEmbedded) {
+          return bodyContent;
+        }
+
+        return Scaffold(
+          backgroundColor: context.background,
+          body: SafeArea(child: bodyContent),
+        );
+      },
     );
   }
 
@@ -289,6 +476,7 @@ class _BoardScreenState extends ConsumerState<BoardScreen> {
 class _KanbanColumn extends StatelessWidget {
   final KanbanStage stage;
   final List<TaskModel> tasks;
+  final bool isMobile;
   final Future<void> Function(TaskModel, KanbanStage) onMoveTask;
   final VoidCallback onAddTask;
   final ValueChanged<TaskModel> onTapTask;
@@ -296,6 +484,7 @@ class _KanbanColumn extends StatelessWidget {
   const _KanbanColumn({
     required this.stage,
     required this.tasks,
+    required this.isMobile,
     required this.onMoveTask,
     required this.onAddTask,
     required this.onTapTask,
@@ -303,107 +492,158 @@ class _KanbanColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 290,
-      margin: const EdgeInsets.only(right: 14),
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.border, width: 0.8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Column Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: context.border, width: 0.8)),
-            ),
-            child: Row(
-              children: [
-                Icon(stage.icon, size: 15, color: context.accent),
-                const SizedBox(width: 8),
-                Text(
-                  stage.label.toUpperCase(),
-                  style: AppTypography.code(context.primaryText, fontSize: 11).copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: context.secondarySurface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: context.border, width: 0.6),
-                  ),
-                  child: Text(
-                    '${tasks.length}',
-                    style: AppTypography.code(context.mutedText, fontSize: 10),
-                  ),
-                ),
-              ],
+    // Column acts as a DragTarget for tasks dropped into this stage
+    return DragTarget<TaskModel>(
+      onWillAcceptWithDetails: (details) => details.data.id.isNotEmpty,
+      onAcceptWithDetails: (details) {
+        HapticFeedback.mediumImpact();
+        onMoveTask(details.data, stage);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovered = candidateData.isNotEmpty;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: isMobile ? double.infinity : 290,
+          margin: EdgeInsets.only(right: isMobile ? 0 : 14),
+          decoration: BoxDecoration(
+            color: isHovered
+                ? context.accent.withValues(alpha: 0.08)
+                : context.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isHovered ? context.accent : context.border,
+              width: isHovered ? 1.5 : 0.8,
             ),
           ),
-
-          // Cards List
-          Expanded(
-            child: tasks.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        'No cards in ${stage.label.toLowerCase()}',
-                        style: AppTypography.bodySmall(context.mutedText),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: tasks.length,
-                    itemBuilder: (context, i) {
-                      final task = tasks[i];
-                      return _KanbanCard(
-                        task: task,
-                        currentStage: stage,
-                        onMove: (target) => onMoveTask(task, target),
-                        onTap: () => onTapTask(task),
-                      );
-                    },
-                  ),
-          ),
-
-          // Quick Add Card Button
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: InkWell(
-              onTap: onAddTask,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Column Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: context.secondarySurface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: context.border, width: 0.8),
+                  border: Border(bottom: BorderSide(color: context.border, width: 0.8)),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.plus, size: 13, color: context.mutedText),
-                    const SizedBox(width: 6),
+                    Icon(stage.icon, size: 15, color: context.accent),
+                    const SizedBox(width: 8),
                     Text(
-                      'Add Card',
-                      style: AppTypography.labelSmall(context.mutedText),
+                      stage.label.toUpperCase(),
+                      style: AppTypography.code(context.primaryText, fontSize: 11).copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: context.secondarySurface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: context.border, width: 0.6),
+                      ),
+                      child: Text(
+                        '${tasks.length}',
+                        style: AppTypography.code(context.mutedText, fontSize: 10),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+
+              // Drop Hover Indicator Banner
+              if (isHovered)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: context.accent, width: 1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Drop card to move to ${stage.label}',
+                      style: AppTypography.code(context.accent, fontSize: 11).copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Cards List (Independently scrollable on vertical axis)
+              Expanded(
+                child: tasks.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(LucideIcons.inbox, size: 24, color: context.mutedText.withValues(alpha: 0.4)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No cards in ${stage.label.toLowerCase()}',
+                                style: AppTypography.bodySmall(context.mutedText),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Drag cards here or add new',
+                                style: AppTypography.code(context.mutedText, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: tasks.length,
+                        itemBuilder: (context, i) {
+                          final task = tasks[i];
+                          return _KanbanCard(
+                            task: task,
+                            currentStage: stage,
+                            onMove: (target) => onMoveTask(task, target),
+                            onTap: () => onTapTask(task),
+                          );
+                        },
+                      ),
+              ),
+
+              // Quick Add Card Button
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: InkWell(
+                  onTap: onAddTask,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.secondarySurface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.border, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(LucideIcons.plus, size: 13, color: context.mutedText),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Add Card',
+                          style: AppTypography.labelSmall(context.mutedText),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -450,7 +690,8 @@ class _KanbanCard extends StatelessWidget {
 
     final currentIndex = KanbanStage.values.indexOf(currentStage);
 
-    return Container(
+    // Standard card presentation widget
+    final cardContent = Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: context.secondarySurface,
@@ -470,7 +711,7 @@ class _KanbanCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Tags
+                // Top Tags with Drag Handle hint
                 Row(
                   children: [
                     Container(
@@ -493,8 +734,11 @@ class _KanbanCard extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    if (task.isFocus)
+                    if (task.isFocus) ...[
                       Icon(LucideIcons.target, size: 13, color: context.accent),
+                      const SizedBox(width: 4),
+                    ],
+                    Icon(LucideIcons.gripVertical, size: 13, color: context.mutedText.withValues(alpha: 0.5)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -527,7 +771,7 @@ class _KanbanCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Move Left
+                    // Move Left Button
                     if (currentIndex > 0)
                       IconButton(
                         visualDensity: VisualDensity.compact,
@@ -565,7 +809,7 @@ class _KanbanCard extends StatelessWidget {
                           .toList(),
                     ),
 
-                    // Move Right
+                    // Move Right Button
                     if (currentIndex < KanbanStage.values.length - 1)
                       IconButton(
                         visualDensity: VisualDensity.compact,
@@ -585,6 +829,70 @@ class _KanbanCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    // Card Wrapped in LongPressDraggable for Drag and Drop across columns and stages
+    return LongPressDraggable<TaskModel>(
+      data: task,
+      delay: const Duration(milliseconds: 140),
+      hapticFeedbackOnStart: true,
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.rotate(
+          angle: 0.04,
+          child: Container(
+            width: 260,
+            decoration: BoxDecoration(
+              color: context.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: context.accent, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: priorityColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        priorityLabel,
+                        style: AppTypography.code(priorityColor, fontSize: 9).copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(LucideIcons.move, size: 13, color: context.accent),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  task.title,
+                  style: AppTypography.bodyMedium(context.primaryText).copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.3,
+        child: cardContent,
+      ),
+      child: cardContent,
     );
   }
 }
